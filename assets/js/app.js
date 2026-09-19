@@ -119,7 +119,7 @@ async function ctpaData(p){
   if(p==='documents')return invoke('workforce-ctpa-documents',{action:'workspace'});
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
   if(p==='billing')return invoke('workforce-invoice-portal',{action:'list'});
-  if(p==='employer-billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
+  if(p==='employer_billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
   if(p==='branding')return invoke('workforce-ctpa-portal',{action:'workspace',scope:'branding'});
   if(p==='support')return invoke('workforce-support',{action:'workspace'});
   const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports'}[p]||'dashboard';
@@ -306,7 +306,7 @@ async function render(ctx){
     html=`<div class="notice">Services on this page are sold by <strong>screenings4u, LLC</strong>. This portal remains the compliance-management system.</div><div class="section service-grid">${cards}</div>`;
   }
   else if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling){setSubtitle('View, download, and pay invoices issued to your C/TPA account by screenings4u.');html=window.AccountBilling.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='employer-billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections){setSubtitle('Run auditable random selections by consortium pool, create testing orders, export records, and deliver selections to Employer portals.');html=window.CtpaSelections.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
@@ -349,7 +349,7 @@ async function render(ctx){
   }
   $('#content').innerHTML=html||`<div class="panel"><div class="empty">No data available.</div></div>`;
   if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling)window.AccountBilling.bind(d,ctx);
-  if(C.kind==='ctpa'&&p==='employer-billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections)window.CtpaSelections.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting)window.CtpaTesting.bind(d,ctx);
