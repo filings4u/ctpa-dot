@@ -24,6 +24,10 @@ function ticketRows(tickets){
   if(!tickets.length)return `<tr><td colspan="6"><div class="support-empty"><div class="support-empty-icon">✓</div><strong>No support requests yet</strong><span>When you create a ticket, its status and updates will appear here.</span></div></td></tr>`;
   return tickets.map(t=>`<tr data-ticket-row data-status="${esc(String(t.status||'open').toLowerCase())}" data-search="${esc([t.ticket_number,t.subject,t.category,t.priority,t.status].join(' ').toLowerCase())}"><td><strong>${esc(t.ticket_number||'Pending')}</strong><small>${esc(t.subject||'')}</small></td><td>${esc(pretty(t.category))}</td><td><span class="badge ${statusClass(t.priority)}">${esc(pretty(t.priority))}</span></td><td><span class="badge ${statusClass(t.status)}">${esc(pretty(t.status))}</span></td><td>${fmt(t.created_at)}</td><td>${fmt(t.updated_at)}</td></tr>`).join('');
 }
+function customerTicketRows(tickets){
+  if(!tickets.length)return `<tr><td colspan="7"><div class="support-empty"><strong>No Employer customer support requests</strong><span>Tickets submitted by your sponsored Employer customers will appear here.</span></div></td></tr>`;
+  return tickets.map(t=>`<tr data-customer-ticket="${esc(t.id)}"><td><strong>${esc(t.ticket_number||'Pending')}</strong><small>${esc(t.subject||'')}</small></td><td>${esc(t.organizations?.legal_name||'Employer')}</td><td>${esc(pretty(t.category))}</td><td><span class="badge ${statusClass(t.priority)}">${esc(pretty(t.priority))}</span></td><td><span class="badge ${statusClass(t.status)}">${esc(pretty(t.status))}</span></td><td>${fmt(t.created_at)}</td><td><select data-ticket-status><option value="open" ${t.status==='open'?'selected':''}>Open</option><option value="in_progress" ${t.status==='in_progress'?'selected':''}>In progress</option><option value="waiting_customer" ${t.status==='waiting_customer'?'selected':''}>Waiting on customer</option><option value="resolved" ${t.status==='resolved'?'selected':''}>Resolved</option><option value="closed" ${t.status==='closed'?'selected':''}>Closed</option></select></td></tr>`).join('');
+}
 function diagnosticFields(ctx={}){
   const c=storedContext(),url=c.page_url||c.url||'',title=c.page_title||'',detected=c.error_message||c.detected_error||'';
   return `<div class="support-diagnostics full">
@@ -40,6 +44,8 @@ function diagnosticFields(ctx={}){
 function render(d={},ctx={}){
   const tickets=Array.isArray(d.tickets)?d.tickets:[];
   const counts=d.counts||countsFrom(tickets);
+  const customerTickets=Array.isArray(d.customer_tickets)?d.customer_tickets:[];
+  const customerCounts=d.customer_counts||countsFrom(customerTickets);
   const email=emailFrom(ctx);
   return `
   <div class="support-shell">
@@ -81,7 +87,7 @@ function render(d={},ctx={}){
             <a href="/login.html"><span class="support-help-icon">↻</span><span><strong>Sign-in or session issue</strong><small>Return to login and start a fresh session.</small></span><b>→</b></a>
             <a href="/employers.html"><span class="support-help-icon">▦</span><span><strong>Employer access</strong><small>Review Employer users and portal access.</small></span><b>→</b></a>
             <a href="/testing.html"><span class="support-help-icon">◆</span><span><strong>Testing workflow</strong><small>Review testing orders and current statuses.</small></span><b>→</b></a>
-            <a href="/billing.html"><span class="support-help-icon">$</span><span><strong>Billing question</strong><small>Review subscription and client billing records.</small></span><b>→</b></a>
+            <a href="/billing.html"><span class="support-help-icon">$</span><span><strong>Account billing</strong><small>View and pay screenings4u invoices for your C/TPA account.</small></span><b>→</b></a><a href="/employer-billing.html"><span class="support-help-icon">$</span><span><strong>Employer billing</strong><small>Create and manage invoices for your Employer customers.</small></span><b>→</b></a>
           </div>
         </section>
         <section class="panel support-expect-card">
@@ -112,6 +118,11 @@ function render(d={},ctx={}){
         <div class="support-ticket-tools"><input type="search" id="supportTicketSearch" placeholder="Search tickets"><select id="supportTicketStatus"><option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting_customer">Waiting on you</option><option value="resolved">Resolved</option></select></div>
       </div>
       <div class="table-wrap"><table class="support-ticket-table"><thead><tr><th>Ticket</th><th>Category</th><th>Priority</th><th>Status</th><th>Created</th><th>Updated</th></tr></thead><tbody id="supportTicketRows">${ticketRows(tickets)}</tbody></table></div>
+    </section>
+
+    <section class="panel section support-ticket-panel">
+      <div class="panel-head support-ticket-head"><div><h2>Employer Customer Support</h2><p>Support requests from Employers sponsored by your C/TPA. These requests are routed to your team and are not placed in the screenings4u Admin support queue.</p></div><div><span class="badge warn">${Number(customerCounts.open||0)+Number(customerCounts.in_progress||0)} active</span></div></div>
+      <div class="table-wrap"><table class="support-ticket-table"><thead><tr><th>Ticket</th><th>Employer</th><th>Category</th><th>Priority</th><th>Status</th><th>Created</th><th>Update Status</th></tr></thead><tbody>${customerTicketRows(customerTickets)}</tbody></table></div>
     </section>
 
     <div class="support-lower-grid section">
@@ -157,6 +168,7 @@ function bind(d={},ctx={}){
   const search=document.getElementById('supportTicketSearch'),status=document.getElementById('supportTicketStatus');
   const filter=()=>{const q=String(search?.value||'').trim().toLowerCase(),s=String(status?.value||'all').toLowerCase();document.querySelectorAll('[data-ticket-row]').forEach(row=>{const hay=String(row.dataset.search||''),rs=String(row.dataset.status||'');row.hidden=!((!q||hay.includes(q))&&(s==='all'||rs===s));});};
   search?.addEventListener('input',filter);status?.addEventListener('change',filter);
+  document.querySelectorAll('[data-customer-ticket] [data-ticket-status]').forEach(sel=>sel.addEventListener('change',async()=>{const row=sel.closest('[data-customer-ticket]');sel.disabled=true;try{await window.Portal.invoke('workforce-support',{action:'update_customer_ticket',ticket_id:row.dataset.customerTicket,status:sel.value});await window.Portal.refresh()}catch(err){alert(err.message||String(err));sel.disabled=false}}));
 }
 window.CtpaSupport={render,bind};
 })();

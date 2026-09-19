@@ -118,7 +118,8 @@ async function ctpaData(p){
   if(p==='compliance')return invoke('workforce-ctpa-compliance',{action:'workspace'});
   if(p==='documents')return invoke('workforce-ctpa-documents',{action:'workspace'});
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
-  if(p==='billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
+  if(p==='billing')return invoke('workforce-invoice-portal',{action:'list'});
+  if(p==='employer-billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
   if(p==='branding')return invoke('workforce-ctpa-portal',{action:'workspace',scope:'branding'});
   if(p==='support')return invoke('workforce-support',{action:'workspace'});
   const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports'}[p]||'dashboard';
@@ -182,7 +183,7 @@ function dashboard(ctx,d){
   if(criticalCases)attention.push([`${criticalCases} high-priority compliance case${criticalCases===1?'':'s'}`,'/compliance.html','Review compliance']);
   if(openTests)attention.push([`${openTests} testing order${openTests===1?'':'s'} still in progress`,'/testing.html','Review testing']);
   if(pendingSelections)attention.push([`${pendingSelections} random selection event${pendingSelections===1?'':'s'} requiring action`,'/selections.html','Review selections']);
-  if(overdueInvoices)attention.push([`${overdueInvoices} overdue client invoice${overdueInvoices===1?'':'s'}`,'/billing.html','Review billing']);
+  if(overdueInvoices)attention.push([`${overdueInvoices} overdue client invoice${overdueInvoices===1?'':'s'}`,'/employer-billing.html','Review Employer billing']);
   if(entitlement.notifications&&unreadNotes)attention.push([`${unreadNotes} notification${unreadNotes===1?'':'s'} requiring attention`,'/notifications.html','Open notifications']);
   if(!attention.length)attention.push(['No urgent items need attention right now.','#','Company is current']);
 
@@ -304,7 +305,8 @@ async function render(ctx){
     const cards=(cat.services||[]).map(s=>{const href=(cat.seller?.checkout_base||'https://screenings4u.com/')+String(s.order_url||'');return `<article class="service"><h3>${esc(s.name)}</h3><p>${esc(s.description||s.category||'DOT service')}</p><div class="price">${s.amount==null?'Request quote':money(s.amount)}</div><div class="seller">Seller: ${esc(s.seller_legal_name||'screenings4u, LLC')}</div><a class="btn primary" href="${esc(href)}" target="_blank" rel="noopener">Order from screenings4u</a></article>`}).join('');
     html=`<div class="notice">Services on this page are sold by <strong>screenings4u, LLC</strong>. This portal remains the compliance-management system.</div><div class="section service-grid">${cards}</div>`;
   }
-  else if(C.kind==='ctpa'&&p==='billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling){setSubtitle('View, download, and pay invoices issued to your C/TPA account by screenings4u.');html=window.AccountBilling.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='employer-billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections){setSubtitle('Run auditable random selections by consortium pool, create testing orders, export records, and deliver selections to Employer portals.');html=window.CtpaSelections.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
@@ -346,7 +348,8 @@ async function render(ctx){
     wireManagementActions(p,d,ctx);
   }
   $('#content').innerHTML=html||`<div class="panel"><div class="empty">No data available.</div></div>`;
-  if(C.kind==='ctpa'&&p==='billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling)window.AccountBilling.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='employer-billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections)window.CtpaSelections.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting)window.CtpaTesting.bind(d,ctx);
