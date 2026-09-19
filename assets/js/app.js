@@ -9,27 +9,32 @@ const fmt=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTim
 const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(v||0));
 const statusClass=v=>/active|complete|completed|paid|eligible|final|negative|acknowledged|available|enabled/i.test(String(v))?'good':/cancel|inactive|terminated|positive|suspended|overdue|failed|closed/i.test(String(v))?'bad':'warn';
 const badge=v=>`<span class="badge ${statusClass(v)}">${esc(pretty(v))}</span>`;
-const page=()=>location.pathname.split('/').pop()?.replace('.html','')||'dashboard';
+const page=()=>norm(document.body?.dataset?.portalPage||location.pathname.split('/').pop()?.replace('.html','')||'dashboard');
 const storageKey=()=>`s4u_${C.portalCode}_membership`;
 const stored=()=>localStorage.getItem(storageKey())||'';
 const saveMid=v=>{if(v)localStorage.setItem(storageKey(),v)};
-const cfgPage=id=>C.pages.find(x=>x.id===id)||{id,label:pretty(id),icon:'•'};
+let NAV=[];
+const cfgPage=id=>NAV.find(x=>norm(x.id)===norm(id))||{id,label:pretty(id),icon:'•',href:`/${id}.html`};
 
 async function getSession(){const {data:{session},error}=await sb.auth.getSession();if(error)throw error;return session}
+function ctpaPayload(body={}){return C.kind==='ctpa'?{membership_id:stored(),...body}:body}
 async function invoke(name,body={}){
   const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
-  const r=await fetch(`${C.workforceUrl}/functions/v1/${name}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(body)});
+  const r=await fetch(`${C.workforceUrl}/functions/v1/${name}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(ctpaPayload(body))});
   const d=await r.json().catch(()=>({}));
   if(!r.ok||d.error)throw Object.assign(new Error(d.error||`Request failed (${r.status}).`),{status:r.status,payload:d});
   return d;
 }
-async function access(){const b={requested_portal_code:C.portalCode};if(stored())b.membership_id=stored();return invoke('workforce-session-context',b)}
+async function access(){const b={requested_portal_code:C.portalCode,requested_page:page()};if(stored())b.membership_id=stored();return invoke('workforce-session-context',b)}
 
 function shell(ctx){
   const current=page();
-  const links=C.pages.map(x=>`<a href="/${x.id}.html" class="${current===x.id?'active':''}"><span class="ico">${esc(x.icon)}</span><span>${esc(x.label)}</span></a>`).join('');
+  NAV=Array.isArray(ctx?.navigation)?ctx.navigation:[];
+  const planLabel=ctx?.subscription?.plan_name||C.label;
+  const links=NAV.map(x=>`<a href="${esc(x.href||('/'+x.id+'.html'))}" class="${current===norm(x.id)?'active':''}"><span class="ico">${esc(x.icon||'•')}</span><span>${esc(x.label||pretty(x.id))}</span></a>`).join('');
+  document.title=`${cfgPage(current).label} | ${planLabel}`;
   document.body.className='';
-  document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="/assets/img/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(ctx.membership?.organization_name||C.label)}</div>${links}</nav><div class="side-foot"><div style="font-size:9px;color:#9fb3c7">Portal</div><div style="font-size:11px;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu">☰</button><span class="crumb">${esc(C.label)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="signout" id="logout">Sign out</button></div></header><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(C.label)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">Loading portal workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"><div class="panel"><div class="loading-msg">Loading…</div></div></section></div></main></div>`;
+  document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="/assets/img/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(planLabel)}</div>${links}</nav><div class="side-foot"><div style="font-size:9px;color:#9fb3c7">Portal</div><div style="font-size:11px;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu">☰</button><span class="crumb">${esc(planLabel)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="signout" id="logout">Sign out</button></div></header><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(planLabel)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">Loading portal workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"><div class="panel"><div class="loading-msg">Loading…</div></div></section></div></main></div>`;
   $('#menu').onclick=()=>$('#side').classList.toggle('open');
   $('#logout').onclick=async()=>{await sb.auth.signOut();location.replace('/login.html')};
 }
@@ -69,19 +74,24 @@ function setSubtitle(v){$('#subtitle').textContent=v}
 function addAction(label,fn,secondary=false){const b=document.createElement('button');b.className=`btn ${secondary?'secondary':'primary'}`;b.textContent=label;b.onclick=fn;$('#actions').appendChild(b)}
 
 async function ctpaData(p){
+  if(p==='employers')return invoke('workforce-ctpa-employers',{action:'workspace'});
   if(p==='people'||p==='programs')return invoke('workforce-ctpa-employees-programs',{action:'workspace'});
   if(p==='pools')return invoke('workforce-ctpa-pools',{action:'workspace'});
+  if(p==='selections')return invoke('workforce-ctpa-selections',{action:'workspace'});
   if(p==='testing')return invoke('workforce-ctpa-testing',{action:'workspace'});
+  if(p==='results')return invoke('workforce-ctpa-results',{action:'workspace'});
   if(p==='compliance')return invoke('workforce-ctpa-compliance',{action:'workspace'});
   if(p==='documents')return invoke('workforce-ctpa-documents',{action:'workspace'});
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
-  const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports',billing:'dashboard'}[p]||'dashboard';
+  if(p==='billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
+  if(p==='branding')return invoke('workforce-ctpa-portal',{action:'workspace',scope:'branding'});
+  const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports'}[p]||'dashboard';
   return invoke('workforce-ctpa-portal',{action:'workspace',scope});
 }
 async function employerData(p){
   if(C.kind==='agency')return invoke('workforce-employer-management',{action:'agency_workspace',agency_code:C.agency});
   if(p==='testing')return invoke('workforce-employer-testing',{action:'list'}).catch(()=>invoke('workforce-employer-management',{action:'overview'}));
-  if(p==='pools')return invoke('workforce-employer-pools',{action:'workspace'}).catch(()=>invoke('workforce-employer-management',{action:'overview'}));
+  if(p==='pools')return invoke('workforce-employer-pools',{action:'workspace'});
   if(p==='selections')return invoke('workforce-employer-pools',{action:'selection_history'}).catch(()=>invoke('workforce-employer-management',{action:'selection_history'}));
   if(p==='documents')return invoke('workforce-employer-documents',{action:'workspace'});
   if(p==='results')return invoke('workforce-employer-results',{action:'workspace'}).catch(()=>invoke('workforce-employer-management',{action:'results'}));
@@ -93,12 +103,68 @@ async function selfData(){return invoke('workforce-employee-portal',{action:'wor
 async function serviceCatalog(){const r=await fetch(`${C.mainUrl}/functions/v1/portal-order-catalog`,{headers:{apikey:C.mainKey}});const d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load services.');return d}
 
 function dashboard(ctx,d){
-  let m=[];
-  if(C.kind==='self')m=[['Testing',(d.testing_orders||[]).length,'My testing orders'],['Results',(d.results||d.result_reports||[]).length,'My available results'],['Documents',(d.documents||[]).length,'My documents'],['Training',(d.training||[]).length,'My training records']];
-  else if(C.kind==='ctpa')m=[['Employers',(d.employers||[]).length,'Managed employers'],['People',(d.employees||[]).length,'Covered people'],['Programs',(d.programs||[]).length,'Testing programs'],['Testing',(d.testing_orders||[]).length,'Testing orders']];
-  else m=[['People',(d.employees||[]).length,'Company roster'],['Programs',(d.programs||[]).length,'Programs'],['Testing',(d.testing_orders||d.orders||[]).length,'Orders'],['Compliance',(d.compliance_cases||d.cases||[]).filter(x=>!['closed','resolved'].includes(norm(x.status))).length,'Open cases']];
-  const quick=C.pages.filter(x=>!['dashboard','profile','company'].includes(x.id)).slice(0,6);
-  return `<div class="metrics">${m.map(x=>metric(...x)).join('')}</div><div class="section"><div class="cards">${quick.map(x=>`<a class="card" href="/${x.id}.html"><strong>${esc(x.label)}</strong><span>Open ${esc(x.label.toLowerCase())}.</span></a>`).join('')}</div></div>`;
+  if(C.kind==='self'){
+    const m=[['Testing',(d.testing_orders||[]).length,'My testing orders'],['Results',(d.results||d.result_reports||[]).length,'My available results'],['Documents',(d.documents||[]).length,'My documents'],['Training',(d.training||[]).length,'My training records']];
+    return `<div class="metrics">${m.map(x=>metric(...x)).join('')}</div>`;
+  }
+  if(C.kind!=='ctpa'){
+    const m=[['People',(d.employees||[]).length,'Company roster'],['Programs',(d.programs||[]).length,'Programs'],['Testing',(d.testing_orders||d.orders||[]).length,'Orders'],['Compliance',(d.compliance_cases||d.cases||[]).filter(x=>!['closed','resolved'].includes(norm(x.status))).length,'Open cases']];
+    return `<div class="metrics">${m.map(x=>metric(...x)).join('')}</div>`;
+  }
+
+  const employers=d.employers||[],employees=d.employees||[],programs=d.programs||[],pools=d.pools||[],selections=d.selection_events||[],tests=d.testing_orders||[],results=d.results||[],cases=d.compliance_cases||[],notes=d.notifications||[],invoices=d.client_invoices||[];
+  const activePrograms=programs.filter(x=>['active','enabled'].includes(norm(x.status))).length;
+  const activePools=pools.filter(x=>!['inactive','archived','closed'].includes(norm(x.status))).length;
+  const openTests=tests.filter(x=>!['complete','completed','cancelled','canceled','final','closed'].includes(norm(x.status))).length;
+  const pendingSelections=selections.filter(x=>!['complete','completed','closed','cancelled','canceled'].includes(norm(x.status))).length;
+  const openCases=cases.filter(x=>!['closed','resolved','complete','completed'].includes(norm(x.status))).length;
+  const criticalCases=cases.filter(x=>!['closed','resolved','complete','completed'].includes(norm(x.status))&&['critical','high','urgent'].includes(norm(x.priority))).length;
+  const unreadNotes=notes.filter(x=>!['read','acknowledged','completed','sent'].includes(norm(x.status))).length;
+  const outstanding=invoices.reduce((n,x)=>n+Number(x.amount_due||0),0);
+  const overdueInvoices=invoices.filter(x=>Number(x.amount_due||0)>0&&x.due_at&&new Date(x.due_at)<new Date()).length;
+  const entitlement=d.entitlements||{};
+
+  const metrics=[
+    ['Employers',employers.length,'Managed client companies'],
+    ['Covered People',employees.length,'Drivers and employees'],
+    ['Active Programs',activePrograms,'DOT testing programs'],
+    ['Active Pools',activePools,'Random pools'],
+    ['Open Testing',openTests,'Orders still in progress'],
+    ['Pending Randoms',pendingSelections,'Selection events requiring action'],
+    ['Open Compliance',openCases,criticalCases?`${criticalCases} high priority`:'No high-priority cases'],
+    ['Outstanding Invoices',money(outstanding),overdueInvoices?`${overdueInvoices} overdue`:'No overdue invoices']
+  ];
+
+  const byEmployer=employers.map(e=>{
+    const eid=e.id,workerCount=employees.filter(x=>x.employer_id===eid).length,programCount=programs.filter(x=>x.employer_id===eid).length,testOpen=tests.filter(x=>x.employer_id===eid&&!['complete','completed','cancelled','canceled','final','closed'].includes(norm(x.status))).length,caseOpen=cases.filter(x=>x.employer_id===eid&&!['closed','resolved','complete','completed'].includes(norm(x.status))).length;
+    const health=caseOpen?`${caseOpen} open compliance`:(testOpen?`${testOpen} tests in progress`:'Good standing');
+    const healthClass=caseOpen?'bad':testOpen?'warn':'good';
+    return `<tr><td><strong>${esc(e.legal_name||e.dba_name||'Employer')}</strong><small>${esc(e.dot_number?`USDOT ${e.dot_number}`:(e.state||''))}</small></td><td>${workerCount}</td><td>${programCount}</td><td>${testOpen}</td><td><span class="badge ${healthClass}">${esc(health)}</span></td><td><a class="snapshot-link" href="/employers.html">Open</a></td></tr>`;
+  }).join('')||`<tr><td colspan="6"><div class="empty">No employers have been added yet.</div></td></tr>`;
+
+  const attention=[];
+  if(criticalCases)attention.push([`${criticalCases} high-priority compliance case${criticalCases===1?'':'s'}`,'/compliance.html','Review compliance']);
+  if(openTests)attention.push([`${openTests} testing order${openTests===1?'':'s'} still in progress`,'/testing.html','Review testing']);
+  if(pendingSelections)attention.push([`${pendingSelections} random selection event${pendingSelections===1?'':'s'} requiring action`,'/selections.html','Review selections']);
+  if(overdueInvoices)attention.push([`${overdueInvoices} overdue client invoice${overdueInvoices===1?'':'s'}`,'/billing.html','Review billing']);
+  if(entitlement.notifications&&unreadNotes)attention.push([`${unreadNotes} notification${unreadNotes===1?'':'s'} requiring attention`,'/notifications.html','Open notifications']);
+  if(!attention.length)attention.push(['No urgent items need attention right now.','#','Company is current']);
+
+  const recentTests=tests.slice(0,6).map(x=>`<tr><td>${esc(x.order_number||'—')}</td><td>${esc((employers.find(e=>e.id===x.employer_id)||{}).legal_name||'—')}</td><td>${esc(pretty(x.reason||'—'))}</td><td>${badge(x.status)}</td></tr>`).join('')||`<tr><td colspan="4"><div class="empty">No recent testing activity.</div></td></tr>`;
+  const recentResults=results.slice(0,6).map(x=>`<tr><td>${esc(x.testing_order_id||x.id||'—')}</td><td>${badge(x.final_status||x.verified_result||x.status||'available')}</td><td>${fmt(x.result_date||x.finalized_at||x.created_at)}</td></tr>`).join('')||`<tr><td colspan="3"><div class="empty">No recent results.</div></td></tr>`;
+  const recentActivity=[...tests.map(x=>({type:'Testing',label:x.order_number||pretty(x.reason),date:x.updated_at||x.created_at,status:x.status})),...cases.map(x=>({type:'Compliance',label:x.case_number||pretty(x.event_type),date:x.updated_at||x.created_at,status:x.status})),...selections.map(x=>({type:'Random',label:pretty(x.selection_type||'Selection event'),date:x.updated_at||x.selection_date||x.created_at,status:x.status}))].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).slice(0,8);
+
+  return `<div class="metrics snapshot-metrics">${metrics.map(x=>metric(...x)).join('')}</div>
+  <div class="section snapshot-grid">
+    <div class="panel"><div class="panel-head"><div><h2>Attention Required</h2><p>Items that may need action today.</p></div></div><div class="snapshot-attention">${attention.map(([label,href,action])=>href==='#'?`<div class="attention-row good"><div><strong>${esc(label)}</strong><span>${esc(action)}</span></div></div>`:`<a class="attention-row" href="${href}"><div><strong>${esc(label)}</strong><span>${esc(action)}</span></div><span>→</span></a>`).join('')}</div></div>
+    <div class="panel"><div class="panel-head"><div><h2>Plan Snapshot</h2><p>Current subscription and enabled premium services.</p></div></div><div class="snapshot-plan"><strong>${esc(d.subscription?.plans?.name||'DOT C/TPA Plan')}</strong><span>${esc(d.subscription?.status?pretty(d.subscription.status):'Active')}</span><div class="plan-chips">${[['Advanced Reports','advanced_reports'],['Employer Portal Delivery','customer_portal_delivery'],['White Label','white_label'],['Branded Email','branded_email'],['Payment Processing','client_payments']].filter(([,k])=>entitlement[k]).map(([l])=>`<span>${esc(l)}</span>`).join('')||'<span>Core C/TPA Management</span>'}</div></div></div>
+  </div>
+  <div class="section"><div class="panel"><div class="panel-head"><div><h2>Employer Health</h2><p>Operational snapshot across every managed client.</p></div><a class="snapshot-link" href="/employers.html">Manage Employers</a></div><div class="table-wrap"><table><thead><tr><th>Employer</th><th>People</th><th>Programs</th><th>Open Tests</th><th>Health</th><th></th></tr></thead><tbody>${byEmployer}</tbody></table></div></div></div>
+  <div class="section snapshot-grid">
+    <div class="panel"><div class="panel-head"><div><h2>Recent Testing</h2><p>Latest testing activity across client employers.</p></div><a class="snapshot-link" href="/testing.html">View Testing</a></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Employer</th><th>Reason</th><th>Status</th></tr></thead><tbody>${recentTests}</tbody></table></div></div>
+    ${entitlement.results_summary?`<div class="panel"><div class="panel-head"><div><h2>Recent Results</h2><p>Most recently posted result records.</p></div><a class="snapshot-link" href="/results.html">View Results</a></div><div class="table-wrap"><table><thead><tr><th>Order / Result</th><th>Result</th><th>Date</th></tr></thead><tbody>${recentResults}</tbody></table></div></div>`:''}
+  </div>
+  <div class="section"><div class="panel"><div class="panel-head"><div><h2>Recent Activity</h2><p>Latest testing, compliance, and random-selection changes.</p></div></div><div class="activity-list">${recentActivity.length?recentActivity.map(x=>`<div class="activity-row"><span class="activity-type">${esc(x.type)}</span><div><strong>${esc(x.label||'Activity')}</strong><small>${fmt(x.date)}</small></div>${badge(x.status||'updated')}</div>`).join(''):'<div class="empty">No recent activity yet.</div>'}</div></div></div>`;
 }
 function profileView(d){const x=d.employee||d.employer||{};return `<div class="metrics">${metric('Name',x.legal_name||[x.first_name,x.last_name].filter(Boolean).join(' ')||'—')}${metric('Email',x.email||x.primary_contact_email||'—')}${metric('Phone',x.mobile||x.phone||'—')}${metric('Status',pretty(x.employment_status||x.status||'—'))}</div>`}
 function pickManagementRows(p,d){
@@ -176,17 +242,7 @@ function wireManagementActions(p,d,ctx){
       return invoke('workforce-employer-management',{action:'save_program',program});
     });
   });
-  if(p==='testing')addAction('Create Testing Order',()=>{
-    const employees=d.employees||[],programs=d.programs||[],employers=d.employers||[];
-    const fields=[];
-    if(C.kind==='ctpa')fields.push({name:'employer_id',label:'Client Employer',type:'select',required:true,options:employers.map(x=>({value:x.id,label:x.legal_name||x.id}))});
-    fields.push({name:'employee_id',label:C.surface==='dot'?'Driver / Employee':'Employee',type:'select',required:true,options:employees.map(x=>({value:x.id,label:[x.first_name,x.last_name].filter(Boolean).join(' ')||x.employee_number||x.id}))},{name:'program_id',label:'Program',type:'select',required:true,options:programs.map(x=>({value:x.id,label:x.name||x.id}))},{name:'reason',label:'Reason',type:'select',value:'pre_employment',options:['pre_employment','reasonable_suspicion','post_accident','return_to_duty','follow_up','other'].map(x=>({value:x,label:pretty(x)}))},{name:'test_type',label:'Test type',type:'select',value:C.surface==='dot'?'drug_and_alcohol':'drug',options:[{value:'drug',label:'Drug'},{value:'alcohol',label:'Alcohol'},{value:'drug_and_alcohol',label:'Drug + Alcohol'}]});
-    modal('Create Testing Order',fields,async v=>{
-      if(C.kind==='ctpa')return invoke('workforce-ctpa-testing',{action:'create',test:v});
-      return invoke('workforce-employer-testing',{action:'create',test:v});
-    });
-  });
-  if(p==='pools')addAction('Add Pool',()=>{
+  if(p==='pools'&&!window.PortalPools)addAction('Add Pool',()=>{
     const fields=[];
     if(C.kind==='ctpa')fields.push({name:'employer_id',label:'Client Employer',type:'select',options:(d.employers||[]).map(x=>({value:x.id,label:x.legal_name||x.id}))});
     fields.push({name:'name',label:'Pool name',required:true},{name:'pool_type',label:'Pool type',type:'select',value:C.kind==='ctpa'?'consortium':'employer',options:[{value:'employer',label:'Employer Pool'},{value:'consortium',label:'Consortium'}]},{name:'program_type',label:'Program type',type:'select',value:C.surface==='dot'?'DOT':'NON_DOT',options:[{value:'DOT',label:'DOT'},{value:'NON_DOT',label:'NON-DOT'}]});
@@ -199,11 +255,12 @@ function wireManagementActions(p,d,ctx){
 }
 
 async function render(ctx){
-  $('#actions').innerHTML='';const p=page();let d;
+  $('#actions').innerHTML='';const p=page();
+  let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
   if(C.kind==='self')setSubtitle('View your own records and complete only the actions assigned to you.');
   else if(C.kind==='agency')setSubtitle(`${C.agency} company management workspace. Changes apply only to your company.`);
-  else setSubtitle('Manage your company records, people, programs, testing and compliance.');
+  else setSubtitle(p==='dashboard'?'Company-wide snapshot of employers, testing, randoms, compliance, billing, and recent activity.':'Manage your company records, people, programs, testing and compliance.');
   let html='';
   if(p==='dashboard')html=dashboard(ctx,d);
   else if(p==='order-services'){
@@ -211,6 +268,17 @@ async function render(ctx){
     const cards=(cat.services||[]).map(s=>{const href=(cat.seller?.checkout_base||'https://screenings4u.com/')+String(s.order_url||'');return `<article class="service"><h3>${esc(s.name)}</h3><p>${esc(s.description||s.category||'DOT service')}</p><div class="price">${s.amount==null?'Request quote':money(s.amount)}</div><div class="seller">Seller: ${esc(s.seller_legal_name||'screenings4u, LLC')}</div><a class="btn primary" href="${esc(href)}" target="_blank" rel="noopener">Order from screenings4u</a></article>`}).join('');
     html=`<div class="notice">Services on this page are sold by <strong>screenings4u, LLC</strong>. This portal remains the compliance-management system.</div><div class="section service-grid">${cards}</div>`;
   }
+  else if(C.kind==='ctpa'&&p==='billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections){setSubtitle('Run auditable random selections by consortium pool, create testing orders, export records, and deliver selections to Employer portals.');html=window.CtpaSelections.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults){setSubtitle('Review finalized screenings4u results, download reports, and release them to Employer portals.');html=window.CtpaResults.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='compliance'&&window.CtpaCompliance){setSubtitle('Monitor Employer compliance health, cases, documents, events, and communicate with client Employers.');html=window.CtpaCompliance.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments){setSubtitle('Manage private C/TPA documents and securely view Employer-uploaded documents.');html=window.CtpaDocuments.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports){setSubtitle('Analyze each client Employer across testing, random selections, compliance, documents, results, and operational activity.');html=window.CtpaReports.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications){setSubtitle('Review inbox conversations, action-center items, and notification delivery history.');html=window.CtpaNotifications.render(d,ctx);}
+  else if(p==='pools'&&window.PortalPools){setSubtitle(C.kind==='ctpa'?'Create consortium pools and manage eligible pool membership.':'Manage random pools and pool participation for this Employer.');html=window.PortalPools.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='branding'&&window.CtpaBranding){setSubtitle('Control the logo and colors your sponsored Employers see in the DOT Employer portal.');html=window.CtpaBranding.render(d,ctx);}
   else if(C.kind==='self'){
     if(p==='profile')html=profileView(d);
     else if(p==='my-testing')html=table('My Testing',d.testing_orders||[],COLS.testing);
@@ -241,12 +309,23 @@ async function render(ctx){
     wireManagementActions(p,d,ctx);
   }
   $('#content').innerHTML=html||`<div class="panel"><div class="empty">No data available.</div></div>`;
+  if(C.kind==='ctpa'&&p==='billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections)window.CtpaSelections.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting)window.CtpaTesting.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults)window.CtpaResults.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='compliance'&&window.CtpaCompliance)window.CtpaCompliance.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments)window.CtpaDocuments.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports)window.CtpaReports.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications)window.CtpaNotifications.bind(d,ctx);
+  if(p==='pools'&&window.PortalPools)window.PortalPools.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='branding'&&window.CtpaBranding)window.CtpaBranding.bind(d,ctx);
 }
 
 async function init(){
   try{const s=await getSession();if(!s){location.replace('/login.html');return}const ctx=await access();if(ctx.requires_workspace_selection){location.replace('/workspace.html');return}if(!ctx.has_access)throw new Error(ctx.reason||'Portal access denied.');saveMid(ctx.membership?.id);window.portalCtx=ctx;shell(ctx);await render(ctx)}
   catch(e){if(e.status===401||e.message==='AUTH_REQUIRED'){await sb.auth.signOut();location.replace('/login.html');return}document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/assets/img/logo.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/login.html">Return to login</a></main>`}
 }
-window.Portal={invoke,sb};
+window.Portal={invoke,sb,refresh:()=>render(window.portalCtx)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
