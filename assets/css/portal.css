@@ -353,3 +353,6 @@ body[data-portal-page="billing"] .content,
 body[data-portal-page="employer-billing"] .content{padding-top:24px}
 @media(max-width:900px){.billing-capability-grid,.billing-bottom-grid{grid-template-columns:1fr}.billing-capability{flex-direction:column;gap:6px}}
 @media(max-width:820px){body[data-portal-page="billing"] .content,body[data-portal-page="employer-billing"] .content{padding-top:12px}}
+
+/* Cloudflare Turnstile — shared DOT portal login */
+.turnstile-wrap{min-height:67px;margin:13px 0 5px;display:flex;align-items:center;justify-content:center;overflow:hidden}.turnstile-wrap>div{width:100%}.login-card .btn[disabled]{opacity:.55;cursor:not-allowed}@media(max-width:420px){.turnstile-wrap{margin-left:-2px;margin-right:-2px}}
