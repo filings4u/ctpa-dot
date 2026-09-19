@@ -1,0 +1,3 @@
+-- Creates public system status components/incidents/update history.
+-- Applied to project wyezpseboxbmkedvbmyx on 2026-09-19.
+-- See live database migration history for canonical SQL.

@@ -11,6 +11,19 @@ const statusClass=v=>/active|complete|completed|paid|eligible|final|negative|ack
 const badge=v=>`<span class="badge ${statusClass(v)}">${esc(pretty(v))}</span>`;
 const page=()=>norm(document.body?.dataset?.portalPage||location.pathname.split('/').pop()?.replace('.html','')||'dashboard');
 const storageKey=()=>`s4u_${C.portalCode}_membership`;
+const SUPPORT_CTX_KEY='s4u_support_context';
+function supportCtxRead(){try{return JSON.parse(sessionStorage.getItem(SUPPORT_CTX_KEY)||'{}')||{}}catch{return{}}}
+function supportCtxWrite(patch={}){try{sessionStorage.setItem(SUPPORT_CTX_KEY,JSON.stringify({...supportCtxRead(),...patch}))}catch{}}
+function rememberSupportPage(){if(page()==='support')return;supportCtxWrite({page_url:location.href,page_title:document.title,page_id:page(),captured_at:new Date().toISOString()})}
+function rememberSupportError(message,source='page'){const m=String(message||'').trim();if(!m||m.length<2)return;supportCtxWrite({error_message:m.slice(0,12000),error_source:source,error_at:new Date().toISOString(),page_url:location.href,page_title:document.title,page_id:page()})}
+function installSupportDiagnostics(){
+  window.addEventListener('error',e=>rememberSupportError(e?.message||e?.error?.message||'JavaScript error','window.error'),true);
+  window.addEventListener('unhandledrejection',e=>rememberSupportError(e?.reason?.message||e?.reason||'Unhandled promise rejection','unhandledrejection'));
+  const scan=()=>{if(page()==='support')return;const sels=['#error','[data-error]','.testing-modal-error','.documents-error','.selection-error','.employer-modal-error','[role="alert"]'];for(const el of document.querySelectorAll(sels.join(','))){const t=String(el.textContent||'').trim();if(t&&!el.hidden&&t.length>1){rememberSupportError(t,'page-message');break}}};
+  const start=()=>{rememberSupportPage();scan();const mo=new MutationObserver(scan);mo.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','class']});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+}
+installSupportDiagnostics();
 const stored=()=>localStorage.getItem(storageKey())||'';
 const saveMid=v=>{if(v)localStorage.setItem(storageKey(),v)};
 let NAV=[];
@@ -33,9 +46,31 @@ function shell(ctx){
   const planLabel=ctx?.subscription?.plan_name||C.label;
   const links=NAV.map(x=>`<a href="${esc(x.href||('/'+x.id+'.html'))}" class="${current===norm(x.id)?'active':''}"><span class="ico">${esc(x.icon||'•')}</span><span>${esc(x.label||pretty(x.id))}</span></a>`).join('');
   document.title=`${cfgPage(current).label} | ${planLabel}`;
+  if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString()});
   document.body.className='';
-  document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="/assets/img/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(planLabel)}</div>${links}</nav><div class="side-foot"><div style="font-size:9px;color:#9fb3c7">Portal</div><div style="font-size:11px;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu">☰</button><span class="crumb">${esc(planLabel)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="signout" id="logout">Sign out</button></div></header><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(planLabel)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">Loading portal workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"><div class="panel"><div class="loading-msg">Loading…</div></div></section></div></main></div>`;
-  $('#menu').onclick=()=>$('#side').classList.toggle('open');
+  document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="/assets/img/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(planLabel)}</div>${links}</nav><div class="side-foot"><div style="font-size:9px;color:#9fb3c7">Portal</div><div style="font-size:11px;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="mobileNav"><span class="menu-bars" aria-hidden="true"><span></span><span></span><span></span></span></button><span class="crumb">${esc(planLabel)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="top-support${current==='support'?' active':''}" id="supportShortcut" type="button"${current==='support'?' aria-current="page"':''}>Support</button><button class="signout" id="logout">Sign out</button></div></header><section class="mobile-nav" id="mobileNav" aria-hidden="true" aria-label="Portal navigation"><div class="mobile-nav-inner"><div class="mobile-nav-head"><div><span>Portal navigation</span><strong>${esc(planLabel)}</strong></div><span class="mobile-nav-current">${esc(cfgPage(current).label)}</span></div><nav class="mobile-nav-links">${links}</nav><div class="mobile-nav-foot"><span>${esc(C.domain)}</span><small>Select a page to close this menu.</small></div></div></section><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(planLabel)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">Loading portal workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"><div class="panel"><div class="loading-msg">Loading…</div></div></section></div></main></div>`;
+  const menuBtn=$('#menu'),mobileNav=$('#mobileNav');
+  const setMobileNav=open=>{
+    const isMobile=window.matchMedia('(max-width: 820px)').matches;
+    const next=!!open&&isMobile;
+    mobileNav?.classList.toggle('open',next);
+    document.body.classList.toggle('mobile-nav-open',next);
+    menuBtn?.classList.toggle('open',next);
+    menuBtn?.setAttribute('aria-expanded',String(next));
+    menuBtn?.setAttribute('aria-label',next?'Close navigation':'Open navigation');
+    mobileNav?.setAttribute('aria-hidden',String(!next));
+  };
+  if(menuBtn&&mobileNav){
+    menuBtn.onclick=()=>setMobileNav(!mobileNav.classList.contains('open'));
+    mobileNav.addEventListener('click',e=>{if(e.target.closest('a'))setMobileNav(false)});
+    window.addEventListener('resize',()=>{if(window.innerWidth>820)setMobileNav(false)},{passive:true});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')setMobileNav(false)});
+  }
+  const supportShortcut=$('#supportShortcut');
+  if(supportShortcut)supportShortcut.onclick=()=>{
+    if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString(),opened_from:'top_support'});
+    if(current!=='support')location.href='/support.html';
+  };
   $('#logout').onclick=async()=>{await sb.auth.signOut();location.replace('/login.html')};
 }
 function metric(label,value,note=''){return `<div class="metric"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(note)}</span></div>`}
@@ -85,6 +120,7 @@ async function ctpaData(p){
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
   if(p==='billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
   if(p==='branding')return invoke('workforce-ctpa-portal',{action:'workspace',scope:'branding'});
+  if(p==='support')return invoke('workforce-support',{action:'workspace'});
   const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports'}[p]||'dashboard';
   return invoke('workforce-ctpa-portal',{action:'workspace',scope});
 }
@@ -277,6 +313,7 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments){setSubtitle('Manage private C/TPA documents and securely view Employer-uploaded documents.');html=window.CtpaDocuments.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports){setSubtitle('Analyze each client Employer across testing, random selections, compliance, documents, results, and operational activity.');html=window.CtpaReports.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications){setSubtitle('Review inbox conversations, action-center items, and notification delivery history.');html=window.CtpaNotifications.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport){setSubtitle('Get help, create support requests, track ticket status, and find answers for common portal issues.');html=window.CtpaSupport.render(d,ctx);}
   else if(p==='pools'&&window.PortalPools){setSubtitle(C.kind==='ctpa'?'Create consortium pools and manage eligible pool membership.':'Manage random pools and pool participation for this Employer.');html=window.PortalPools.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='branding'&&window.CtpaBranding){setSubtitle('Control the logo and colors your sponsored Employers see in the DOT Employer portal.');html=window.CtpaBranding.render(d,ctx);}
   else if(C.kind==='self'){
@@ -318,6 +355,7 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments)window.CtpaDocuments.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports)window.CtpaReports.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications)window.CtpaNotifications.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport)window.CtpaSupport.bind(d,ctx);
   if(p==='pools'&&window.PortalPools)window.PortalPools.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='branding'&&window.CtpaBranding)window.CtpaBranding.bind(d,ctx);
 }
