@@ -110,6 +110,7 @@ function addAction(label,fn,secondary=false){const b=document.createElement('but
 
 async function ctpaData(p){
   if(p==='employers')return invoke('workforce-ctpa-employers',{action:'workspace'});
+  if(p==='owner-operators')return invoke('workforce-ctpa-owner-operators',{action:'workspace'});
   if(p==='people'||p==='programs')return invoke('workforce-ctpa-employees-programs',{action:'workspace'});
   if(p==='pools')return invoke('workforce-ctpa-pools',{action:'workspace'});
   if(p==='selections')return invoke('workforce-ctpa-selections',{action:'workspace'});
@@ -308,6 +309,7 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling){setSubtitle('View, download, and pay invoices issued to your C/TPA account by screenings4u.');html=window.AccountBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='owner-operators'&&window.CtpaOwnerOperators){setSubtitle('Manage Owner-Operator customers sponsored by this C/TPA.');html=window.CtpaOwnerOperators.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections){setSubtitle('Run auditable random selections by consortium pool, create testing orders, export records, and deliver selections to Employer portals.');html=window.CtpaSelections.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults){setSubtitle('Review finalized screenings4u results, download reports, and release them to Employer portals.');html=window.CtpaResults.render(d,ctx);}
@@ -351,6 +353,7 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling)window.AccountBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='owner-operators'&&window.CtpaOwnerOperators)window.CtpaOwnerOperators.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections)window.CtpaSelections.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting)window.CtpaTesting.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults)window.CtpaResults.bind(d,ctx);
