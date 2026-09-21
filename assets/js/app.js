@@ -108,6 +108,83 @@ function modal(title,fields,onSave){
 function setSubtitle(v){$('#subtitle').textContent=v}
 function addAction(label,fn,secondary=false){const b=document.createElement('button');b.className=`btn ${secondary?'secondary':'primary'}`;b.textContent=label;b.onclick=fn;$('#actions').appendChild(b)}
 
+function isUtilityPage(p){return ['integrations','audit-history','locations','users-roles'].includes(norm(p).replaceAll('_','-'))}
+async function utilityData(p){
+  p=norm(p).replaceAll('_','-');
+  if(C.kind==='self'){
+    const a={integrations:'portal_integrations','audit-history':'audit_history',locations:'locations','users-roles':'users_roles'}[p];
+    return invoke('workforce-employee-portal',{action:a,membership_id:stored()});
+  }
+  if(C.kind==='ctpa'){
+    if(p==='integrations')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'integrations'}).catch(e=>({integrations:[],not_enabled:true,message:e.message||String(e),access_mode:'view_only'}));
+    if(p==='audit-history')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'audit'});
+    if(p==='locations')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'locations'});
+    if(p==='users-roles')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'staff'}).then(x=>({...x,access_mode:x.can_manage?'manage':'view_only'})).catch(e=>({members:[],roles:[],not_enabled:true,message:e.message||String(e),access_mode:'view_only'}));
+  }
+  if(p==='integrations')return invoke('workforce-employer-advanced',{action:'integrations'}).catch(e=>({integrations:[],not_enabled:true,message:e.message||String(e),access_mode:'view_only'}));
+  if(p==='audit-history')return invoke('workforce-employer-management',{action:'audit'});
+  if(p==='locations')return invoke('workforce-employer-management',{action:'locations'});
+  if(p==='users-roles')return invoke('workforce-employer-management',{action:'members'}).then(x=>({...x,access_mode:window.portalCtx?.membership?.role_code==='employer_admin'?'manage':'limited'}));
+  return {};
+}
+function utilityPersonName(m){const p=m?.profile||m?.profiles||m?.actor_profile||{};return p.full_name||p.display_name||[p.first_name,p.last_name].filter(Boolean).join(' ')||m?.user_id||m?.actor_user_id||'Portal user'}
+function utilityIntegrationsView(d){
+  if(d?.not_enabled)return `<div class="notice"><strong>Integrations</strong><br>${esc(d.message||'Integrations are not enabled for this account yet.')}</div>`;
+  const catalog=d.catalog||[],enable=d.enablements||[],legacy=d.integrations||[];
+  const em=new Map(enable.map(x=>[String(x.integration_catalog_id),x]));
+  const cards=catalog.map(x=>{const e=em.get(String(x.id)),on=e?.enabled===true||['active','enabled','connected'].includes(norm(e?.status));return `<article class="card utility-card"><div class="panel-head"><div><h3>${esc(x.name||x.code)}</h3><p>${esc(x.provider||x.category||'Integration')}</p></div>${badge(on?'enabled':(e?.status||'available'))}</div><p>${esc(x.description||'Connect this service to your DOT workspace.')}</p><small>${esc(x.category||'Integration')}</small></article>`}).join('');
+  const rows=legacy.map(x=>`<tr><td><strong>${esc(x.name||x.provider||'Integration')}</strong><small>${esc(x.provider||x.integration_type||'')}</small></td><td>${badge(x.status||'unknown')}</td><td>${fmt(x.last_sync_at)}</td><td>${fmt(x.updated_at)}</td>${d.can_manage?`<td><button class="mini-btn" data-integration-id="${esc(x.id)}">Manage</button></td>`:''}</tr>`).join('');
+  return `${cards?`<div class="cards utility-grid">${cards}</div>`:'<div class="panel"><div class="empty">No integration catalog entries are available.</div></div>'}${legacy.length?`<div class="section panel"><div class="panel-head"><div><h2>Connected Integrations</h2><p>Current tenant-level integration connections.</p></div></div><div class="table-wrap"><table><thead><tr><th>Integration</th><th>Status</th><th>Last Sync</th><th>Updated</th>${d.can_manage?'<th></th>':''}</tr></thead><tbody>${rows}</tbody></table></div></div>`:''}`;
+}
+function utilityAuditView(d){
+  const rows=d.audit_events||d.events||[];
+  const body=rows.map(x=>`<tr><td>${fmt(x.event_at)}</td><td><strong>${esc(pretty(x.action||'activity'))}</strong></td><td>${esc(pretty(x.resource_type||'record'))}<small>${esc(x.resource_id||'')}</small></td><td>${esc(utilityPersonName(x))}</td></tr>`).join('');
+  return `<div class="panel"><div class="panel-head"><div><h2>Audit History</h2><p>Recorded portal activity for this workspace.</p></div><span class="badge">${rows.length} event${rows.length===1?'':'s'}</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Resource</th><th>Actor</th></tr></thead><tbody>${body||'<tr><td colspan="4"><div class="empty">No audit events are available for this workspace.</div></td></tr>'}</tbody></table></div></div>`;
+}
+function utilityLocationsView(d){
+  const rows=d.locations||[];
+  const body=rows.map(x=>{const employer=x.employer?.legal_name||x.employer?.dba_name||'';const addr=[x.address_line1,x.address_line2,x.city,x.state,x.postal_code].filter(Boolean).join(', ');return `<tr><td><strong>${esc(x.name||'Location')}</strong><small>${esc(employer||pretty(x.location_type||'work site'))}</small></td><td>${esc(addr||'—')}</td><td>${esc(x.phone||'—')}</td><td>${badge(x.status||'active')}</td><td>${x.is_primary?'<span class="badge good">Primary</span>':'—'}</td>${d.access_mode==='manage'&&C.kind!=='ctpa'&&C.kind!=='self'?`<td><button class="mini-btn" data-location-id="${esc(x.id)}">Edit</button></td>`:''}</tr>`}).join('');
+  const note=d.assigned_only?'<div class="notice">This page shows the location currently assigned to your employee record.</div>':'';
+  return `${note}<div class="panel"><div class="panel-head"><div><h2>Locations</h2><p>${C.kind==='ctpa'?'Work sites for Employers managed by this C/TPA.':'Company work sites and operating locations.'}</p></div><span class="badge">${rows.length} location${rows.length===1?'':'s'}</span></div><div class="table-wrap"><table><thead><tr><th>Location</th><th>Address</th><th>Phone</th><th>Status</th><th>Primary</th>${d.access_mode==='manage'&&C.kind!=='ctpa'&&C.kind!=='self'?'<th></th>':''}</tr></thead><tbody>${body||'<tr><td colspan="6"><div class="empty">No locations are configured yet.</div></td></tr>'}</tbody></table></div></div>`;
+}
+function utilityUsersRolesView(d){
+  if(d?.not_enabled)return `<div class="notice"><strong>Users & Roles</strong><br>${esc(d.message||'User management is not enabled for this account yet.')}</div>`;
+  const rows=d.members||[],manage=d.access_mode==='manage'||d.can_manage===true;
+  const body=rows.map(m=>`<tr><td><strong>${esc(utilityPersonName(m))}</strong><small>${esc((m.profile||m.profiles||{}).email||'')}</small></td><td>${esc(m.roles?.name||pretty(m.roles?.code||'user'))}</td><td>${badge(m.status||'active')}</td><td>${m.is_primary?'<span class="badge good">Primary</span>':'—'}</td><td>${m.accepted_at?fmt(m.accepted_at):(m.invited_at?'Invite pending':'—')}</td>${manage&&String(m.user_id)!==String(d.current_user_id||'')?`<td><button class="mini-btn" data-user-role="${esc(m.id)}">Manage</button></td>`:(manage?'<td>—</td>':'')}</tr>`).join('');
+  return `<div class="panel"><div class="panel-head"><div><h2>Users & Roles</h2><p>Portal access, assigned roles, and membership status for this workspace.</p></div><span class="badge">${rows.length} user${rows.length===1?'':'s'}</span></div><div class="table-wrap"><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Primary</th><th>Access</th>${manage?'<th></th>':''}</tr></thead><tbody>${body||'<tr><td colspan="6"><div class="empty">No portal users are available.</div></td></tr>'}</tbody></table></div></div>`;
+}
+function renderUtilityPage(p,d){
+  p=norm(p).replaceAll('_','-');
+  if(p==='integrations')return utilityIntegrationsView(d);
+  if(p==='audit-history')return utilityAuditView(d);
+  if(p==='locations')return utilityLocationsView(d);
+  if(p==='users-roles')return utilityUsersRolesView(d);
+  return '<div class="panel"><div class="empty">No utility data available.</div></div>';
+}
+function bindUtilityPage(p,d,ctx){
+  p=norm(p).replaceAll('_','-');
+  if(p==='locations'&&d.access_mode==='manage'&&C.kind!=='ctpa'&&C.kind!=='self'){
+    const openLocation=(x={})=>modal(x.id?'Edit Location':'Add Location',[
+      {name:'name',label:'Location name',value:x.name||'',required:true},{name:'location_type',label:'Location type',value:x.location_type||'work_site'},
+      {name:'address_line1',label:'Address line 1',value:x.address_line1||'',full:true},{name:'address_line2',label:'Address line 2',value:x.address_line2||'',full:true},
+      {name:'city',label:'City',value:x.city||''},{name:'state',label:'State',value:x.state||''},{name:'postal_code',label:'ZIP / postal code',value:x.postal_code||''},
+      {name:'phone',label:'Phone',type:'tel',value:x.phone||''},{name:'timezone',label:'Timezone',value:x.timezone||''},
+      {name:'status',label:'Status',type:'select',value:x.status||'active',options:[{value:'active',label:'Active'},{value:'inactive',label:'Inactive'}]},
+      {name:'is_primary',label:'Primary location',type:'select',value:x.is_primary?'true':'false',options:[{value:'false',label:'No'},{value:'true',label:'Yes'}]}
+    ],async v=>invoke('workforce-employer-management',{action:'save_location',location:{...v,id:x.id||undefined,is_primary:String(v.is_primary)==='true'}}));
+    addAction('Add Location',()=>openLocation({}));
+    document.querySelectorAll('[data-location-id]').forEach(b=>b.onclick=()=>{const x=(d.locations||[]).find(y=>String(y.id)===String(b.dataset.locationId));if(x)openLocation(x)});
+  }
+  if(p==='users-roles'){
+    const manage=d.access_mode==='manage'||d.can_manage===true;
+    if(manage&&C.kind==='ctpa')addAction('Invite User',()=>modal('Invite C/TPA User',[{name:'first_name',label:'First name',required:true},{name:'last_name',label:'Last name',required:true},{name:'email',label:'Email',type:'email',required:true},{name:'role_code',label:'Role',type:'select',value:'ctpa_staff',options:[{value:'ctpa_staff',label:'C/TPA Staff'},{value:'ctpa_admin',label:'C/TPA Administrator'}]}],async v=>invoke('workforce-ctpa-admin',{action:'invite_staff',member:v})));
+    document.querySelectorAll('[data-user-role]').forEach(b=>b.onclick=()=>{const m=(d.members||[]).find(x=>String(x.id)===String(b.dataset.userRole));if(!m)return;const opts=(d.roles||[]).map(r=>({value:r.id,label:r.name||pretty(r.code)}));modal('Manage User Role',[{name:'role_id',label:'Role',type:'select',value:m.role_id,options:opts},{name:'status',label:'Status',type:'select',value:m.status||'active',options:[{value:'active',label:'Active'},{value:'suspended',label:'Suspended'},{value:'revoked',label:'Revoked'}]}],async v=>{if(C.kind==='ctpa')return invoke('workforce-ctpa-admin',{action:'save_staff',member:{id:m.id,...v}});return invoke('workforce-employer-management',{action:'save_member_role',member:{id:m.id,...v}})})});
+  }
+  if(p==='integrations'&&d.can_manage&&C.kind==='ctpa'){
+    document.querySelectorAll('[data-integration-id]').forEach(b=>b.onclick=()=>{const x=(d.integrations||[]).find(y=>String(y.id)===String(b.dataset.integrationId));if(!x)return;modal('Manage Integration',[{name:'status',label:'Status',type:'select',value:x.status||'inactive',options:[{value:'active',label:'Active'},{value:'inactive',label:'Inactive'},{value:'disabled',label:'Disabled'}]}],async v=>invoke('workforce-ctpa-admin',{action:'save_integration_status',integration:{id:x.id,status:v.status}}))});
+  }
+}
+
 async function ctpaData(p){
   if(p==='employers')return invoke('workforce-ctpa-employers',{action:'workspace'});
   if(p==='owner-operators')return invoke('workforce-ctpa-owner-operators',{action:'workspace'});
@@ -119,6 +196,8 @@ async function ctpaData(p){
   if(p==='compliance')return invoke('workforce-ctpa-compliance',{action:'workspace'});
   if(p==='documents')return invoke('workforce-ctpa-documents',{action:'workspace'});
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
+  if(p==='order-history')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'order-history'});
+  if(p==='subscription')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'subscription'});
   if(p==='billing')return invoke('workforce-invoice-portal',{action:'list'});
   if(p==='employer_billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
   if(p==='branding')return invoke('workforce-ctpa-portal',{action:'workspace',scope:'branding'});
@@ -259,12 +338,16 @@ function wireManagementActions(p,d,ctx){
     if(['drivers','covered-workers','mariners'].includes(p))addAction('Add Covered Worker',()=>modal('Add Covered Worker',[{name:'first_name',label:'First name',required:true},{name:'last_name',label:'Last name',required:true},{name:'employee_number',label:'Employee number'},{name:'email',label:'Email',type:'email'},{name:'job_title',label:'Safety-sensitive position'}],async v=>invoke('workforce-employer-management',{action:'save_employee',employee:{...v,dot_covered:true,dot_agency:C.agency,safety_sensitive:true,employment_status:'active'}})));
     return;
   }
-  if(p==='people')addAction(C.surface==='dot'?'Add Driver / Employee':'Add Employee',()=>{
+  if(p==='people')addAction(C.surface==='dot'?'Add Covered Worker':'Add Employee',()=>{
     const fields=[];
     if(C.kind==='ctpa')fields.push({name:'employer_id',label:'Client Employer',type:'select',required:true,options:(d.employers||[]).map(x=>({value:x.id,label:x.legal_name||x.dba_name||x.id}))});
-    fields.push({name:'first_name',label:'First name',required:true},{name:'last_name',label:'Last name',required:true},{name:'employee_number',label:'Employee number'},{name:'email',label:'Email',type:'email'},{name:'job_title',label:'Job title'});
-    if(C.surface==='dot')fields.push({name:'dot_agency',label:'DOT Agency',type:'select',value:'FMCSA',options:['FMCSA','FAA','FRA','FTA','PHMSA','USCG'].map(x=>({value:x,label:x}))});
-    modal('Add Employee',fields,async v=>{
+    fields.push({name:'first_name',label:'First name',required:true},{name:'last_name',label:'Last name',required:true},{name:'employee_number',label:'Employee number'},{name:'email',label:'Email',type:'email'});
+    if(C.surface==='dot'){
+      fields.push({name:'dot_agency',label:'DOT Agency',type:'select',value:'FMCSA',options:['FMCSA','FAA','FRA','FTA','PHMSA','USCG'].map(x=>({value:x,label:x}))});
+      fields.push({name:'dot_position_id',label:'Safety-sensitive / covered position',type:'select',required:true,options:[{value:'',label:'Choose position'},...(d.position_catalog||[]).map(x=>({value:x.id,label:`${x.agency_code} — ${x.title}`}))]});
+      fields.push({name:'cdl_number',label:'CDL number (when required)'},{name:'cdl_state',label:'CDL state'});
+    } else fields.push({name:'job_title',label:'Job title'});
+    modal('Add Covered Worker',fields,async v=>{
       if(C.kind==='ctpa')return invoke('workforce-ctpa-employees-programs',{action:'save_employee',employee:{...v,dot_covered:C.surface==='dot',employment_status:'active',safety_sensitive:C.surface==='dot'}});
       return invoke('workforce-employer-management',{action:'save_employee',employee:{...v,dot_covered:C.surface==='dot',employment_status:'active',safety_sensitive:C.surface==='dot'}});
     });
@@ -296,16 +379,20 @@ async function render(ctx){
   $('#actions').innerHTML='';const p=page();
   let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
+  if(isUtilityPage(p))d=await utilityData(p);
   if(C.kind==='self')setSubtitle('View your own records and complete only the actions assigned to you.');
   else if(C.kind==='agency')setSubtitle(`${C.agency} company management workspace. Changes apply only to your company.`);
   else setSubtitle(p==='dashboard'?'Company-wide snapshot of employers, testing, randoms, compliance, billing, and recent activity.':'Manage your company records, people, programs, testing and compliance.');
   let html='';
-  if(p==='dashboard')html=dashboard(ctx,d);
+  if(isUtilityPage(p))html=renderUtilityPage(p,d);
+  else if(p==='dashboard')html=dashboard(ctx,d);
   else if(p==='order-services'){
     const cat=await serviceCatalog();
     const cards=(cat.services||[]).map(s=>{const href=(cat.seller?.checkout_base||'https://screenings4u.com/')+String(s.order_url||'');return `<article class="service"><h3>${esc(s.name)}</h3><p>${esc(s.description||s.category||'DOT service')}</p><div class="price">${s.amount==null?'Request quote':money(s.amount)}</div><div class="seller">Seller: ${esc(s.seller_legal_name||'screenings4u, LLC')}</div><a class="btn primary" href="${esc(href)}" target="_blank" rel="noopener">Order from screenings4u</a></article>`}).join('');
     html=`<div class="notice">Services on this page are sold by <strong>screenings4u, LLC</strong>. This portal remains the compliance-management system.</div><div class="section service-grid">${cards}</div>`;
   }
+  else if(C.kind==='ctpa'&&p==='order-history'&&window.AccountOrderHistory){setSubtitle('View and download receipts for your screenings4u DOT C/TPA account.');html=window.AccountOrderHistory.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='subscription'&&window.AccountSubscription){setSubtitle('Review your current screenings4u DOT C/TPA software subscription.');html=window.AccountSubscription.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling){setSubtitle('View, download, and pay invoices issued to your C/TPA account by screenings4u.');html=window.AccountBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
@@ -350,6 +437,9 @@ async function render(ctx){
     wireManagementActions(p,d,ctx);
   }
   $('#content').innerHTML=html||`<div class="panel"><div class="empty">No data available.</div></div>`;
+  if(isUtilityPage(p))bindUtilityPage(p,d,ctx);
+  if(p==='order-history'&&window.AccountOrderHistory)window.AccountOrderHistory.bind(d,ctx);
+  if(p==='subscription'&&window.AccountSubscription)window.AccountSubscription.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling)window.AccountBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
