@@ -168,7 +168,7 @@ function bind(d={},ctx={}){
   const search=document.getElementById('supportTicketSearch'),status=document.getElementById('supportTicketStatus');
   const filter=()=>{const q=String(search?.value||'').trim().toLowerCase(),s=String(status?.value||'all').toLowerCase();document.querySelectorAll('[data-ticket-row]').forEach(row=>{const hay=String(row.dataset.search||''),rs=String(row.dataset.status||'');row.hidden=!((!q||hay.includes(q))&&(s==='all'||rs===s));});};
   search?.addEventListener('input',filter);status?.addEventListener('change',filter);
-  document.querySelectorAll('[data-customer-ticket] [data-ticket-status]').forEach(sel=>sel.addEventListener('change',async()=>{const row=sel.closest('[data-customer-ticket]');sel.disabled=true;try{await window.Portal.invoke('workforce-support',{action:'update_customer_ticket',ticket_id:row.dataset.customerTicket,status:sel.value});await window.Portal.refresh()}catch(err){alert(err.message||String(err));sel.disabled=false}}));
+  document.querySelectorAll('[data-customer-ticket] [data-ticket-status]').forEach(sel=>sel.addEventListener('change',async()=>{const row=sel.closest('[data-customer-ticket]');sel.disabled=true;try{await window.Portal.invoke('workforce-support',{action:'update_customer_ticket',ticket_id:row.dataset.customerTicket,status:sel.value});await window.Portal.refresh()}catch(err){window.S4UDialog.alert(err.message||String(err));sel.disabled=false}}));
 }
 window.CtpaSupport={render,bind};
 })();

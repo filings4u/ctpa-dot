@@ -8,7 +8,7 @@ function modal(title,body,onSubmit){
  const b=document.createElement('div');b.className='modal-backdrop';
  b.innerHTML=`<form class="modal"><h2>${esc(title)}</h2><div class="modal-grid">${body}</div><div class="modal-actions"><button class="btn ghost" type="button" data-cancel>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`;
  document.body.appendChild(b);$('[data-cancel]',b).onclick=()=>b.remove();
- $('form',b).onsubmit=async ev=>{ev.preventDefault();const btn=$('button[type=submit]',b);btn.disabled=true;try{await onSubmit(Object.fromEntries(new FormData(ev.currentTarget)));b.remove();await window.Portal.refresh()}catch(e){alert(e.message||String(e));btn.disabled=false}};
+ $('form',b).onsubmit=async ev=>{ev.preventDefault();const btn=$('button[type=submit]',b);btn.disabled=true;try{await onSubmit(Object.fromEntries(new FormData(ev.currentTarget)));b.remove();await window.Portal.refresh()}catch(e){window.S4UDialog.alert(e.message||String(e));btn.disabled=false}};
 }
 function createOwner(){
  modal('Add Owner-Operator',`

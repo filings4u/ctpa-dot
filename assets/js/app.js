@@ -38,7 +38,7 @@ async function invoke(name,body={}){
   if(!r.ok||d.error)throw Object.assign(new Error(d.error||`Request failed (${r.status}).`),{status:r.status,payload:d});
   return d;
 }
-async function access(){const b={requested_portal_code:C.portalCode,requested_page:page()};if(stored())b.membership_id=stored();return invoke('workforce-session-context',b)}
+async function access(){const b={requested_portal_code:C.portalCode,requested_page:page(),surface:C.surface,portal_code:C.portalCode,page:page()};if(stored())b.membership_id=stored();return invoke('workforce-session-context',b)}
 
 function shell(ctx){
   const current=page();
@@ -103,7 +103,7 @@ function modal(title,fields,onSave){
   const fieldHtml=fields.map(f=>{const input=f.type==='select'?`<select name="${esc(f.name)}" ${f.required?'required':''}>${(f.options||[]).map(o=>`<option value="${esc(o.value)}" ${String(o.value)===String(f.value??'')?'selected':''}>${esc(o.label)}</option>`).join('')}</select>`:`<input type="${esc(f.type||'text')}" name="${esc(f.name)}" value="${esc(f.value||'')}" ${f.required?'required':''}>`;return `<div class="field ${f.full?'full':''}"><label>${esc(f.label)}</label>${input}</div>`}).join('');
   b.innerHTML=`<form class="modal"><h2>${esc(title)}</h2><div class="modal-grid">${fieldHtml}</div><div class="modal-actions"><button type="button" class="btn ghost" data-cancel>Cancel</button><button type="submit" class="btn primary">Save</button></div></form>`;
   document.body.appendChild(b);b.querySelector('[data-cancel]').onclick=()=>b.remove();
-  b.querySelector('form').onsubmit=async e=>{e.preventDefault();try{const v=Object.fromEntries(new FormData(e.currentTarget).entries());await onSave(v);b.remove();await render(window.portalCtx)}catch(err){alert(err.message||String(err))}};
+  b.querySelector('form').onsubmit=async e=>{e.preventDefault();try{const v=Object.fromEntries(new FormData(e.currentTarget).entries());await onSave(v);b.remove();await render(window.portalCtx)}catch(err){window.S4UDialog.alert(err.message||String(err))}};
 }
 function setSubtitle(v){$('#subtitle').textContent=v}
 function addAction(label,fn,secondary=false){const b=document.createElement('button');b.className=`btn ${secondary?'secondary':'primary'}`;b.textContent=label;b.onclick=fn;$('#actions').appendChild(b)}
