@@ -38,7 +38,7 @@ async function invoke(name,body={}){
   if(!r.ok||d.error)throw Object.assign(new Error(d.error||`Request failed (${r.status}).`),{status:r.status,payload:d});
   return d;
 }
-async function access(){const b={requested_portal_code:C.portalCode,requested_page:page(),surface:C.surface,portal_code:C.portalCode,page:page()};if(stored())b.membership_id=stored();return invoke('workforce-session-context',b)}
+async function access(){const b={requested_portal_code:C.portalCode,requested_page:page(),surface:C.surface,portal_code:C.portalCode,page:page()};if(stored())b.membership_id=stored();return invoke('dot-session-context',b)}
 
 function shell(ctx){
   const current=page();

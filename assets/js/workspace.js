@@ -2,7 +2,7 @@
   const C=window.PORTAL_CONFIG,sb=window.supabase.createClient(C.workforceUrl,C.workforceKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   const {data:{session}}=await sb.auth.getSession();if(!session){location.replace('/login.html');return}
   const id=new URLSearchParams(location.search).get('id')||'';
-  const r=await fetch(`${C.workforceUrl}/functions/v1/workforce-session-context`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':C.workforceKey},body:JSON.stringify({requested_portal_code:C.portalCode,membership_id:id,surface:C.surface,portal_code:C.portalCode})});
+  const r=await fetch(`${C.workforceUrl}/functions/v1/dot-session-context`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':C.workforceKey},body:JSON.stringify({requested_portal_code:C.portalCode,membership_id:id,surface:C.surface,portal_code:C.portalCode})});
   const d=await r.json().catch(()=>({}));
   if(!r.ok){document.body.classList.remove('loading');document.getElementById('msg').textContent=d.error||d.reason||'Unable to load workspace.';return}
   if(d.requires_workspace_selection){

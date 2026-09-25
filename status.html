@@ -15,7 +15,7 @@
     .section{margin-top:22px}.section h2{font-size:16px;color:var(--navy);margin:0 0 10px}.incident{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:10px}.incident-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.incident h3{font-size:13px;color:var(--navy);margin:0}.incident p{font-size:10.5px;color:var(--muted);line-height:1.55}.incident-meta{font-size:9px;color:#8494a6}.updates{border-top:1px solid #edf1f5;margin-top:12px;padding-top:11px}.update{padding:8px 0}.update strong{font-size:9.5px;color:var(--ink)}.update span{font-size:9px;color:var(--muted);margin-left:6px}.empty{background:#fff;border:1px solid var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:11px}.footer{text-align:center;color:var(--muted);font-size:9.5px;padding-top:28px}
     @media(max-width:700px){.top{padding:0 14px}.top img{width:132px}.wrap{padding:18px 12px 38px}.hero{padding:24px 20px}.hero h1{font-size:28px}.overall{align-items:flex-start}.checked{margin-left:0}.grid{grid-template-columns:1fr}.incident-head{display:block}.state{display:inline-block;margin-top:8px}}
   </style>
-<script src="/assets/js/dialogs.js?v=20260925-lockdown"></script></head>
+<script src="/assets/js/dialogs.js?v=20260925-lockdown"></script><script src="/assets/js/config.js?v=enterprise-cutover"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/assets/js/session-security.js?v=enterprise-cutover"></script><style>html.s4u-auth-pending body{visibility:hidden!important}</style><script>document.documentElement.classList.add("s4u-auth-pending")</script></head>
 <body>
   <header class="top"><img src="/assets/img/logo.png" alt="screenings4u"><a href="/support.html">Support</a></header>
   <main class="wrap">
@@ -27,10 +27,10 @@
     <section class="section"><h2>Recent Incidents</h2><div id="recentIncidents"><div class="empty">Loading recent incident history…</div></div></section>
     <div class="footer">Status information refreshes automatically every 60 seconds.</div>
   </main>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
-    const SUPABASE_URL='https://wyezpseboxbmkedvbmyx.supabase.co';
-    const SUPABASE_KEY='sb_publishable__BLewZS6h2V4yUczky-BTQ_EemiOdDL';
+    const SUPABASE_URL='https://elpbnytpciqnbexiaebp.supabase.co';
+    const SUPABASE_KEY='sb_publishable_xVI6Mjkk1bNVMGHZCPuK6w_8FSHKdkC';
     const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false}});
     const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const label=v=>String(v||'operational').replaceAll('_',' ').replace(/\b\w/g,m=>m.toUpperCase());
