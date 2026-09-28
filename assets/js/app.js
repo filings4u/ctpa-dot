@@ -47,7 +47,8 @@ function ctpaPayload(body={}){return C.kind==='ctpa'?{membership_id:stored(),...
 async function invoke(name,body={}){
   const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
   const payload=window.S4UWithPortal(ctpaPayload({...body,legacy_endpoint:name}));
-  const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot-actions`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});
+  const endpoint=name==='workforce-ctpa-employers'?'workforce-ctpa-employers':'ctpa-dot-actions';
+  const r=await fetch(`${C.workforceUrl}/functions/v1/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});
   const d=await r.json().catch(()=>({}));
   const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');
   if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});
