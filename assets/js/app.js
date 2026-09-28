@@ -27,6 +27,17 @@ installSupportDiagnostics();
 const stored=()=>localStorage.getItem(storageKey())||'';
 const saveMid=v=>{if(v)localStorage.setItem(storageKey(),v)};
 let NAV=[];
+function buildNavigation(ctx={}){
+  const e=ctx.entitlements||{};
+  const items=[
+    ['dashboard','Dashboard','⌂',null],['onboarding','Getting Started','✓',null],
+    ['employers','Employers','▣','employer_management'],['owner-operators','Owner-Operators','◈','employer_management'],['people','People','●','employee_management'],['programs','Programs','◎','programs'],
+    ['pools','Pools','◉','consortium_pools'],['selections','Selections','↻','random_selections'],['testing','Testing','◆','testing_orders'],['results','Results','✓','results_summary'],['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Notifications','✉','notifications'],
+    ['order-services','Order Services','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
+    ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit History','◷','audit_history'],['support','Support','? ',null]
+  ];
+  return items.filter(x=>!x[3]||e[x[3]]===true).map(x=>({id:x[0],label:x[1],icon:x[2],href:`/${x[0]}.html`}));
+}
 const cfgPage=id=>NAV.find(x=>norm(x.id)===norm(id))||{id,label:pretty(id),icon:'•',href:`/${id}.html`};
 
 async function getSession(){const {data:{session},error}=await sb.auth.getSession();if(error)throw error;return session}
@@ -42,8 +53,8 @@ async function access(){const b={requested_portal_code:C.portalCode,requested_pa
 
 function shell(ctx){
   const current=page();
-  NAV=Array.isArray(ctx?.navigation)?ctx.navigation:[];
-  const planLabel=ctx?.subscription?.plan_name||C.label;
+  NAV=buildNavigation(ctx);
+  const planLabel=ctx?.plan?.name||ctx?.subscription?.plan_name||C.label;
   const links=NAV.map(x=>`<a href="${esc(x.href||('/'+x.id+'.html'))}" class="${current===norm(x.id)?'active':''}"><span class="ico">${esc(x.icon||'•')}</span><span>${esc(x.label||pretty(x.id))}</span></a>`).join('');
   document.title=`${cfgPage(current).label} | ${planLabel}`;
   if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString()});
@@ -380,11 +391,25 @@ async function render(ctx){
   let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
   if(isUtilityPage(p))d=await utilityData(p);
+  if(C.kind==='ctpa'&&p==='dashboard'&&!localStorage.getItem('s4u_ctpa_dot_onboarding_seen')&&Array.isArray(d?.employers)&&d.employers.length===0){location.replace('/onboarding.html');return;}
   if(C.kind==='self')setSubtitle('View your own records and complete only the actions assigned to you.');
   else if(C.kind==='agency')setSubtitle(`${C.agency} company management workspace. Changes apply only to your company.`);
   else setSubtitle(p==='dashboard'?'Company-wide snapshot of employers, testing, randoms, compliance, billing, and recent activity.':'Manage your company records, people, programs, testing and compliance.');
   let html='';
   if(isUtilityPage(p))html=renderUtilityPage(p,d);
+  else if(C.kind==='ctpa'&&p==='onboarding'){
+    setSubtitle('Set up the core C/TPA workspace and start managing your Employer customers.');
+    const e=ctx.entitlements||{},steps=[
+      ['Add Employers','Create client Employer companies and invite Employer Portal administrators.','/employers.html',e.employer_management===true],
+      ['Add People & Programs','Create covered employees/drivers and Employer DOT programs.','/people.html',e.employee_management===true||e.programs===true],
+      ['Configure Consortium Pools','Build consortium pools and add eligible members.','/pools.html',e.consortium_pools===true],
+      ['Run Random Selections','Run auditable selections and create testing orders.','/selections.html',e.random_selections===true],
+      ['Review Testing & Results','Monitor testing fulfillment and release finalized results.','/testing.html',e.testing_orders===true],
+      ['Set Up Employer Billing','Configure remittance details and create client invoices.','/employer-billing.html',e.client_invoicing===true],
+      ['Customize Branding','Apply your C/TPA logo and colors to sponsored Employer portals.','/branding.html',e.white_label===true]
+    ].filter(x=>x[3]);
+    html=`<div class="notice"><strong>${esc(ctx.organization?.dba_name||ctx.organization?.legal_name||'C/TPA')} setup</strong><br>Your available setup steps are based on the active Supabase plan and entitlements.</div><div class="section cards">${steps.map((x,i)=>`<article class="card"><small>STEP ${i+1}</small><h3>${esc(x[0])}</h3><p>${esc(x[1])}</p><a class="btn primary" href="${esc(x[2])}">Open</a></article>`).join('')}</div><div class="section"><a class="btn secondary" id="finishOnboarding" href="/dashboard.html">Continue to Dashboard</a></div>`;
+  }
   else if(p==='dashboard')html=dashboard(ctx,d);
   else if(p==='order-services'){
     const cat=await serviceCatalog();
@@ -437,6 +462,7 @@ async function render(ctx){
     wireManagementActions(p,d,ctx);
   }
   $('#content').innerHTML=html||`<div class="panel"><div class="empty">No data available.</div></div>`;
+  if(p==='onboarding')$('#finishOnboarding')?.addEventListener('click',()=>localStorage.setItem('s4u_ctpa_dot_onboarding_seen','1'));
   if(isUtilityPage(p))bindUtilityPage(p,d,ctx);
   if(p==='order-history'&&window.AccountOrderHistory)window.AccountOrderHistory.bind(d,ctx);
   if(p==='subscription'&&window.AccountSubscription)window.AccountSubscription.bind(d,ctx);
