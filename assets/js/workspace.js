@@ -1,15 +1,11 @@
 (async()=>{
-  const C=window.PORTAL_CONFIG,sb=window.supabase.createClient(C.workforceUrl,C.workforceKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-  const {data:{session}}=await sb.auth.getSession();if(!session){location.replace('/login.html');return}
-  const id=new URLSearchParams(location.search).get('id')||'';
-  const r=await fetch(`${C.workforceUrl}/functions/v1/dot-session-context`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':C.workforceKey},body:JSON.stringify({requested_portal_code:C.portalCode,membership_id:id,surface:C.surface,portal_code:C.portalCode})});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok){document.body.classList.remove('loading');document.getElementById('msg').textContent=d.error||d.reason||'Unable to load workspace.';return}
-  if(d.requires_workspace_selection){
-    document.body.classList.remove('loading');
-    document.getElementById('choices').innerHTML=(d.workspaces||[]).map(w=>`<a class="card" style="display:block;margin:8px 0" href="/workspace.html?id=${encodeURIComponent(w.membership_id)}"><strong>${w.plan_name||'Subscription'}</strong></a>`).join('');
-    return;
-  }
-  if(d.membership?.id)localStorage.setItem(`s4u_${C.portalCode}_membership`,d.membership.id);
-  location.replace('/dashboard.html');
+  const C=window.PORTAL_CONFIG||window.S4U||{},sb=window.S4UGetSupabaseClient();
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const {data:{session},error}=await sb.auth.getSession();if(error||!session){location.replace('/login.html?reason=session');return}
+  const q=new URLSearchParams(location.search),id=q.get('id')||'',sid=q.get('subscription')||q.get('sid')||'';
+  const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot-session`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(window.S4UWithPortal({membership_id:id||undefined,subscription_id:sid||undefined,surface:C.surface,page:'workspace'}))});
+  const d=await r.json().catch(()=>({}));document.body.classList.remove('loading');
+  if(!r.ok||d.error){document.documentElement.classList.remove('s4u-auth-pending');document.getElementById('msg').textContent=d.error||d.reason||'Unable to load workspace.';return}
+  if(d.requires_workspace_selection){const rows=d.workspaces||[];document.getElementById('msg').textContent=rows.length>1?'Choose the subscription you want to use.':'Choose your workspace.';document.getElementById('choices').innerHTML=rows.map(w=>{const href=`/workspace.html?id=${encodeURIComponent(w.membership_id||'')}&subscription=${encodeURIComponent(w.subscription_id||'')}`,sub=w.plan_name||w.plan_code||'DOT Subscription',org=w.organization_name||'DOT Account',role=String(w.role_code||'').replaceAll('_',' ');return `<a class="card" style="display:block;margin:8px 0;text-decoration:none" href="${href}"><strong>${esc(sub)}</strong><span style="display:block;margin-top:4px">${esc(org)}</span>${role?`<small style="display:block;margin-top:3px;opacity:.72">${esc(role)}</small>`:''}</a>`}).join('');document.documentElement.classList.remove('s4u-auth-pending');return}
+  const membership=d.membership?.id||id,subscription=d.subscription?.id||sid;try{if(membership)localStorage.setItem(`s4u_${C.portalCode}_membership`,membership);if(subscription)localStorage.setItem(`s4u_${C.portalCode}_subscription`,subscription)}catch{}location.replace('/dashboard.html');
 })();
