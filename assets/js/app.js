@@ -10,9 +10,9 @@ const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).
 const statusClass=v=>/active|complete|completed|paid|eligible|final|negative|acknowledged|available|enabled/i.test(String(v))?'good':/cancel|inactive|terminated|positive|suspended|overdue|failed|closed/i.test(String(v))?'bad':'warn';
 const badge=v=>`<span class="badge ${statusClass(v)}">${esc(pretty(v))}</span>`;
 const page=()=>norm(document.body?.dataset?.portalPage||location.pathname.split('/').pop()?.replace('.html','')||'dashboard');
-const storageKey=()=>`s4u_${C.portalCode}_membership`;
-const subscriptionKey=()=>`s4u_${C.portalCode}_subscription`;
-const storedSubscription=()=>localStorage.getItem(subscriptionKey())||'';
+const W=window.S4UCTPAWorkspace;
+const workspace=()=>W.read();
+const storedSubscription=()=>workspace()?.subscription_id||'';
 const SUPPORT_CTX_KEY='s4u_support_context';
 function supportCtxRead(){try{return JSON.parse(sessionStorage.getItem(SUPPORT_CTX_KEY)||'{}')||{}}catch{return{}}}
 function supportCtxWrite(patch={}){try{sessionStorage.setItem(SUPPORT_CTX_KEY,JSON.stringify({...supportCtxRead(),...patch}))}catch{}}
@@ -26,8 +26,9 @@ function installSupportDiagnostics(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 }
 installSupportDiagnostics();
-const stored=()=>localStorage.getItem(storageKey())||'';
-const saveMid=v=>{if(v)localStorage.setItem(storageKey(),v)};
+const stored=()=>workspace()?.membership_id||'';
+const storedCtpa=()=>workspace()?.ctpa_id||'';
+const saveMid=()=>{};
 let NAV=[];
 function buildNavigation(ctx={}){
   const e=ctx.entitlements||{};
@@ -45,14 +46,14 @@ function buildNavigation(ctx={}){
 const cfgPage=id=>NAV.find(x=>norm(x.id)===norm(id))||{id,label:pretty(id),icon:'•',href:`/${id}.html`};
 
 async function getSession(){const {data:{session},error}=await sb.auth.getSession();if(error)throw error;return session}
-function ctpaPayload(body={}){return C.kind==='ctpa'?{membership_id:stored(),...body}:body}
+function ctpaPayload(body={}){const w=workspace();return C.kind==='ctpa'?{ctpa_id:w?.ctpa_id,subscription_id:w?.subscription_id,membership_id:w?.membership_id,...body}:body}
 async function invoke(name,body={}){
   const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
-  const membership=stored(),subscription=storedSubscription();if(!membership||!subscription)throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409});
-  const payload={...body,legacy_endpoint:name,membership_id:membership,subscription_id:subscription};
+  const w=workspace();if(!w?.ctpa_id||!w?.subscription_id)throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409});
+  const payload={...body,legacy_endpoint:name,ctpa_id:w.ctpa_id,subscription_id:w.subscription_id,membership_id:w.membership_id||undefined};
   const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d;
 }
-async function access(){const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const membership=stored(),subscription=storedSubscription();if(!membership||!subscription){location.replace('/workspace.html');throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409})}const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot/session`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify({membership_id:membership,subscription_id:subscription,page:page()})});const d=await r.json().catch(()=>({}));if(d.checkout_required&&d.checkout_url){location.replace(d.checkout_url);throw Object.assign(new Error('Subscription renewal required.'),{status:402})}const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d}
+async function access(){if(window.S4UCTPAVerifiedContext)return window.S4UCTPAVerifiedContext;if(window.S4UCTPAAuthReady)return await window.S4UCTPAAuthReady;throw Object.assign(new Error('Authentication verification is unavailable.'),{status:500})}
 
 function shell(ctx){
   const current=page();
@@ -85,7 +86,7 @@ function shell(ctx){
     if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString(),opened_from:'top_support'});
     if(current!=='support')location.href='/support.html';
   };
-  $('#logout').onclick=async()=>{try{if(C.kind==='ctpa')await invoke('workforce-ctpa-admin',{action:'log_portal_event',event_type:'auth.logout',summary:'User signed out',resource_type:'user',resource_id:window.portalCtx?.user?.id||null,user_agent:navigator.userAgent})}catch(_){}await sb.auth.signOut();location.replace('/login.html')};
+  $('#logout').onclick=async()=>{try{if(C.kind==='ctpa')await invoke('workforce-ctpa-admin',{action:'log_portal_event',event_type:'auth.logout',summary:'User signed out',resource_type:'user',resource_id:window.portalCtx?.user?.id||null,user_agent:navigator.userAgent})}catch(_){}W.clear();await sb.auth.signOut({scope:'local'});location.replace('/login.html')};
 }
 function metric(label,value,note=''){return `<div class="metric"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(note)}</span></div>`}
 function read(o,keys){for(const k of keys){let v=o;for(const p of k.split('.'))v=v?.[p];if(v!==undefined&&v!==null&&v!=='')return v}return'—'}
@@ -550,8 +551,8 @@ function startRealtime(ctx){
   }catch(e){console.warn('Realtime unavailable',e)}
 }
 async function init(){
-  try{const s=await getSession();if(!s){location.replace('/login.html');return}const ctx=await access();if(ctx.requires_workspace_selection){location.replace('/workspace.html');return}if(!ctx.has_access)throw new Error(ctx.reason||'Portal access denied.');saveMid(ctx.membership?.id);window.portalCtx=ctx;shell(ctx);await render(ctx);startRealtime(ctx)}
-  catch(e){if(e.status===401||e.message==='AUTH_REQUIRED'){await sb.auth.signOut();location.replace('/login.html');return}document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/login.html">Return to login</a></main>`}
+  try{const ctx=await access();if(!ctx?.has_access)throw new Error(ctx?.reason||'Portal access denied.');window.portalCtx=ctx;shell(ctx);await render(ctx);startRealtime(ctx)}
+  catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('/login.html');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
 }
 window.Portal={invoke,sb,refresh:async()=>Promise.resolve(),liveRefresh:scheduleLiveRender};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
