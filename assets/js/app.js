@@ -35,11 +35,12 @@ function buildNavigation(ctx={}){
     ['dashboard','Dashboard','⌂',null],
     ['employers','1. Employers','▣','employer_management'],['people','2. People','●','employee_management'],['programs','3. Programs','◎','programs'],
     ['pools','4. Pools','◉','consortium_pools'],['selections','5. Selections','↻','random_selections'],['testing','6. Testing','◆','testing_orders'],['results','7. Results','✓','results_summary'],
-['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Notifications','✉','notifications'],
-    ['order-services','Order Services','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
+['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Notifications','✉','notifications','enterprise'],['screenings4u-notifications','screenings4u Notifications','✉','notifications','enterprise'],
+    ['order-services','Add Features','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
     ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit History','◷','audit_history'],['support','Support','? ',null]
   ];
-  return items.filter(x=>!x[3]||e[x[3]]===true).map(x=>({id:x[0],label:x[1],icon:x[2],href:`/${x[0]}.html`}));
+  const enterprise=String(ctx?.plan?.code||ctx?.subscription?.plan_code||'').toLowerCase()==='dot_ctpa_enterprise';
+  return items.filter(x=>(!x[3]||e[x[3]]===true)&&(!x[4]||enterprise)).map(x=>({id:x[0],label:x[1],icon:x[2],href:`/${x[0]}.html`}));
 }
 const cfgPage=id=>NAV.find(x=>norm(x.id)===norm(id))||{id,label:pretty(id),icon:'•',href:`/${id}.html`};
 
@@ -215,12 +216,14 @@ async function ctpaData(p){
   if(p==='reports'||p==='report_generate')return invoke('workforce-ctpa-reports',{action:'workspace'});
   if(p==='report_view'||p==='report_archive'){const id=new URLSearchParams(location.search).get('id')||'';return invoke('workforce-ctpa-reports',{action:'get_report',report_id:id});}
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
+  if(p==='screenings4u_notifications')return invoke('workforce-ctpa-platform-notifications',{action:'workspace'});
   if(p==='order_history')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'order-history'});
   if(p==='subscription')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'subscription'});
-  if(p==='billing')return invoke('workforce-invoice-portal',{action:'list'});
-  if(p==='employer_billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
+  if(p==='billing')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'account_billing'});
+  if(['employer_billing','employer_invoice_form','employer_invoice_view','employer_invoice_send','employer_invoice_delete','employer_remittance'].includes(p))return invoke('workforce-ctpa-admin',{action:'workspace',scope:'billing'});
   if(p==='branding')return invoke('workforce-ctpa-portal',{action:'workspace',scope:'branding'});
   if(p==='support')return invoke('workforce-support',{action:'workspace'});
+  if(p==='order_services')return invoke('workforce-ctpa-features',{action:'workspace'});
   const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports'}[p]||'dashboard';
   return invoke('workforce-ctpa-portal',{action:'workspace',scope});
 }
@@ -406,15 +409,12 @@ async function render(ctx){
   let html='';
   if(isUtilityPage(p))html=renderUtilityPage(p,d);
   else if(p==='dashboard')html=dashboard(ctx,d);
-  else if(p==='order_services'){
-    const cat=await serviceCatalog();
-    const cards=(cat.services||[]).map(s=>{const href=(cat.seller?.checkout_base||'https://screenings4u.com/')+String(s.order_url||'');return `<article class="service"><h3>${esc(s.name)}</h3><p>${esc(s.description||s.category||'DOT service')}</p><div class="price">${s.amount==null?'Request quote':money(s.amount)}</div><div class="seller">Seller: ${esc(s.seller_legal_name||'screenings4u, LLC')}</div><a class="btn primary" href="${esc(href)}" target="_blank" rel="noopener">Order from screenings4u</a></article>`}).join('');
-    html=`<div class="notice">Services on this page are sold by <strong>screenings4u, LLC</strong>. This portal remains the compliance-management system.</div><div class="section service-grid">${cards}</div>`;
-  }
+  else if(C.kind==='ctpa'&&p==='order_services'&&window.CtpaFeatures){setSubtitle('Review available account features and submit requests for screenings4u approval.');html=window.CtpaFeatures.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='order_history'&&window.AccountOrderHistory){setSubtitle('View and download receipts for your screenings4u DOT C/TPA account.');html=window.AccountOrderHistory.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='subscription'&&window.AccountSubscription){setSubtitle('Review your current screenings4u DOT C/TPA software subscription.');html=window.AccountSubscription.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling){setSubtitle('View, download, and pay invoices issued to your C/TPA account by screenings4u.');html=window.AccountBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
+  else if(C.kind==='ctpa'&&['employer_invoice_form','employer_invoice_view','employer_invoice_send','employer_invoice_delete','employer_remittance'].includes(p)&&window.CtpaInvoicePages){setSubtitle('Manage Employer and Owner-Operator invoices and remittance information.');html=window.CtpaInvoicePages.render(p,d,ctx);}
   else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='employer-form'&&window.CtpaEmployerForm){setSubtitle('Create or edit an Employer record.');html=window.CtpaEmployerForm.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='people'&&window.CtpaPeople){setSubtitle('View every employee, driver, staff member, and contractor across managed Employers.');html=window.CtpaPeople.render(d,ctx);}
@@ -437,7 +437,8 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='report_generate'&&window.CtpaReportGenerate){setSubtitle('Generate a DOT compliance report from the live C/TPA records.');html=window.CtpaReportGenerate.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='report_view'&&window.CtpaReportView){setSubtitle('View this generated report.');html=window.CtpaReportView.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='report_archive'&&window.CtpaReportArchive){setSubtitle('Archive this generated report.');html=window.CtpaReportArchive.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications){setSubtitle('Review inbox conversations, action-center items, and notification delivery history.');html=window.CtpaNotifications.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaLiveChat){setSubtitle('Live support conversations with your managed Employers and Owner-Operators.');html=window.CtpaLiveChat.render(d,ctx,'employer');}
+  else if(C.kind==='ctpa'&&p==='screenings4u_notifications'&&window.CtpaLiveChat){setSubtitle('Live support conversations with screenings4u administrators.');html=window.CtpaLiveChat.render(d,ctx,'platform');}
   else if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport){setSubtitle('Get help, create support requests, track ticket status, and find answers for common portal issues.');html=window.CtpaSupport.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='pool_form'&&window.CtpaPoolForm){setSubtitle('Configure the consortium Pool created from its Program.');html=window.CtpaPoolForm.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='pool_detail'&&window.CtpaPoolDetail){setSubtitle('View and manage people in this random pool.');html=window.CtpaPoolDetail.render(d,ctx);}
@@ -478,6 +479,7 @@ async function render(ctx){
   if(p==='subscription'&&window.AccountSubscription)window.AccountSubscription.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='billing'&&window.AccountBilling)window.AccountBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
+  if(C.kind==='ctpa'&&['employer_invoice_form','employer_invoice_view','employer_invoice_send','employer_invoice_delete','employer_remittance'].includes(p)&&window.CtpaInvoicePages)window.CtpaInvoicePages.bind(p,d,ctx);
   if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='employer-form'&&window.CtpaEmployerForm)window.CtpaEmployerForm.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='people'&&window.CtpaPeople)window.CtpaPeople.bind(d,ctx);
@@ -500,8 +502,10 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='report_generate'&&window.CtpaReportGenerate)window.CtpaReportGenerate.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='report_view'&&window.CtpaReportView)window.CtpaReportView.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='report_archive'&&window.CtpaReportArchive)window.CtpaReportArchive.bind(d,ctx);
-  if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications)window.CtpaNotifications.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaLiveChat)window.CtpaLiveChat.bind(d,ctx,'employer');
+  if(C.kind==='ctpa'&&p==='screenings4u_notifications'&&window.CtpaLiveChat)window.CtpaLiveChat.bind(d,ctx,'platform');
   if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport)window.CtpaSupport.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='order_services'&&window.CtpaFeatures)window.CtpaFeatures.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='pool_form'&&window.CtpaPoolForm)window.CtpaPoolForm.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='pool_detail'&&window.CtpaPoolDetail)window.CtpaPoolDetail.bind(d,ctx);
   if(p==='pools'&&window.PortalPools)window.PortalPools.bind(d,ctx);
