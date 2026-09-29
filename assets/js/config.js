@@ -12,7 +12,7 @@ window.PORTAL_CONFIG=Object.freeze({
  window.S4UGetSupabaseClient=function(){
    if(window.__S4U_CTPA_CLIENT__)return window.__S4U_CTPA_CLIENT__;
    if(!window.supabase?.createClient)throw new Error('Supabase client library is not loaded.');
-   window.__S4U_CTPA_CLIENT__=window.supabase.createClient(C.workforceUrl,C.workforceKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   window.__S4U_CTPA_CLIENT__=window.supabase.createClient(C.workforceUrl,C.workforceKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'s4u_ctpa_dot_auth'}});
    return window.__S4U_CTPA_CLIENT__;
  };
  window.S4UCTPAPayload=function(body={}){
