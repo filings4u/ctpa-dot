@@ -48,14 +48,11 @@ async function getSession(){const {data:{session},error}=await sb.auth.getSessio
 function ctpaPayload(body={}){return C.kind==='ctpa'?{membership_id:stored(),...body}:body}
 async function invoke(name,body={}){
   const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
-  const send=async(includeStored=true)=>{const base={...body,legacy_endpoint:name};const payload=window.S4UWithPortal(C.kind==='ctpa'?(includeStored?ctpaPayload(base):base):base);const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));return {r,d}};
-  let {r,d}=await send(true);
-  if(C.kind==='ctpa'&&r.status===403&&stored()){try{localStorage.removeItem(storageKey())}catch{};({r,d}=await send(false))}
-  const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');
-  if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});
-  return d;
+  const membership=stored(),subscription=storedSubscription();if(!membership||!subscription)throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409});
+  const payload={...body,legacy_endpoint:name,membership_id:membership,subscription_id:subscription};
+  const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d;
 }
-async function access(){const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const request=async(includeStored=true)=>{const b={requested_portal_code:C.portalCode,requested_page:page(),surface:C.surface,portal_code:C.portalCode,page:page()};if(includeStored&&stored())b.membership_id=stored();if(typeof storedSubscription==='function'&&storedSubscription())b.subscription_id=storedSubscription();const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot/session`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(window.S4UWithPortal(b))});const d=await r.json().catch(()=>({}));return {r,d}};let {r,d}=await request(true);if(C.kind==='ctpa'&&r.status===403&&stored()){try{localStorage.removeItem(storageKey())}catch{};({r,d}=await request(false))}const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d}
+async function access(){const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const membership=stored(),subscription=storedSubscription();if(!membership||!subscription){location.replace('/workspace.html');throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409})}const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot/session`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify({membership_id:membership,subscription_id:subscription,page:page()})});const d=await r.json().catch(()=>({}));if(d.checkout_required&&d.checkout_url){location.replace(d.checkout_url);throw Object.assign(new Error('Subscription renewal required.'),{status:402})}const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d}
 
 function shell(ctx){
   const current=page();
@@ -254,7 +251,7 @@ async function employerData(p){
   return invoke('workforce-employer-management',{action:map[p]||'overview'});
 }
 async function selfData(){return invoke('workforce-employee-portal',{action:'workspace',membership_id:stored()})}
-async function serviceCatalog(){const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','apikey':C.workforceKey,'Authorization':`Bearer ${(await getSession())?.access_token||''}`},body:JSON.stringify(window.S4UWithPortal({legacy_endpoint:'portal-order-catalog',action:'workspace'}))});const d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load services.');return d}
+async function serviceCatalog(){const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','apikey':C.workforceKey,'Authorization':`Bearer ${(await getSession())?.access_token||''}`},body:JSON.stringify(window.S4UCTPAPayload({legacy_endpoint:'portal-order-catalog',action:'workspace'}))});const d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load services.');return d}
 
 function dashboard(ctx,d){
   if(C.kind==='self'){
