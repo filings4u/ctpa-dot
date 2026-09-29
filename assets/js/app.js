@@ -413,7 +413,7 @@ async function render(ctx){
       ['4. Configure Pools','Create pools and add eligible safety-sensitive people from Employers assigned to the Program.','/pools.html',e.consortium_pools===true],
       ['5. Run Selections','Run locked random selections from the current eligible pool population.','/selections.html',e.random_selections===true],
       ['6. Order Testing','Order and schedule screenings4u tests for people whose Employer is assigned to the Program.','/testing.html',e.testing_orders===true],
-      ['7. Review Results','Review finalized laboratory/MRO results and release them to Employers.','/results.html',e.results_summary===true],
+      ['7. Review Results','View finalized screenings4u results and download the official report.','/results.html',e.results_summary===true],
       ['Set Up Employer Billing','Configure remittance details and create client invoices.','/employer-billing.html',e.client_invoicing===true],
       ['Customize Branding','Apply your C/TPA logo and colors to sponsored Employer portals.','/branding.html',e.white_label===true]
     ].filter(x=>x[3]);
@@ -440,12 +440,12 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='testing_order'&&window.CtpaTestingOrder){setSubtitle('Create a screenings4u DOT testing order.');html=window.CtpaTestingOrder.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing_documents'&&window.CtpaTestingDocuments){setSubtitle('View, edit, and archive testing-related documents.');html=window.CtpaTestingDocuments.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing_document_edit'&&window.CtpaTestingDocumentEdit){setSubtitle('Edit a C/TPA-owned testing document.');html=window.CtpaTestingDocumentEdit.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='result_detail'&&window.CtpaResultDetail){setSubtitle('Review the complete finalized laboratory/MRO result record.');html=window.CtpaResultDetail.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='result_detail'&&window.CtpaResultDetail){setSubtitle('View read-only finalized result details and download the official report.');html=window.CtpaResultDetail.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='owner_operators'&&window.CtpaOwnerOperators){setSubtitle('Manage Owner-Operator customers sponsored by this C/TPA.');html=window.CtpaOwnerOperators.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections){setSubtitle('Run auditable random selections by consortium pool, create testing orders, export records, and deliver selections to Employer portals.');html=window.CtpaSelections.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selection_detail'&&window.CtpaSelectionDetail){setSubtitle('Review the locked selection population, selected people, testing orders, and Employer notices.');html=window.CtpaSelectionDetail.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults){setSubtitle('Review finalized screenings4u results, download reports, and release them to Employer portals.');html=window.CtpaResults.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults){setSubtitle('View finalized screenings4u results and download official reports.');html=window.CtpaResults.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='compliance'&&window.CtpaCompliance){setSubtitle('Monitor Employer compliance health, cases, documents, events, and communicate with client Employers.');html=window.CtpaCompliance.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments){setSubtitle('Manage private C/TPA documents and securely view Employer-uploaded documents.');html=window.CtpaDocuments.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports){setSubtitle('Analyze each client Employer across testing, random selections, compliance, documents, results, and operational activity.');html=window.CtpaReports.render(d,ctx);}
