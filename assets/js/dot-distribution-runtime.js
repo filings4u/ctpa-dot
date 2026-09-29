@@ -1,7 +1,7 @@
 /* screenings4u DOT centralized distribution runtime */
 (()=>{
 'use strict';
-const ENDPOINT='https://elpbnytpciqnbexiaebp.supabase.co/functions/v1/ctpa-dot-distribution';
+const ENDPOINT='https://elpbnytpciqnbexiaebp.supabase.co/functions/v1/ctpa-dot/distribution';
 const APIKEY='sb_publishable_xVI6Mjkk1bNVMGHZCPuK6w_8FSHKdkC';
 const route=location.pathname==='/'?'/':location.pathname;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));

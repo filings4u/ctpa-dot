@@ -3,6 +3,7 @@ const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>String(v||'').toLowerCase().replaceAll('-','_');
+function employerStatus(e){return e?.archived_at?'archived':(norm(e?.status)||'inactive')}
 const pretty=v=>String(v??'—').replaceAll('_',' ').replace(/\b\w/g,x=>x.toUpperCase());
 const badge=v=>{const n=norm(v),c=['active','accepted','enabled'].includes(n)?'good':['suspended','revoked','inactive','closed'].includes(n)?'bad':'warn';return `<span class="badge ${c}">${esc(pretty(v||'onboarding'))}</span>`};
 const fmt=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d)};
@@ -25,10 +26,11 @@ function setBusy(btn,busy,label='Save'){btn.disabled=busy;btn.textContent=busy?'
 function input(name,label,val='',type='text',full=false,required=false){return `<div class="field ${full?'full':''}"><label>${esc(label)}</label><input name="${esc(name)}" type="${esc(type)}" value="${esc(val)}" ${required?'required':''}></div>`}
 function select(name,label,val,options,full=false){return `<div class="field ${full?'full':''}"><label>${esc(label)}</label><select name="${esc(name)}">${options.map(o=>`<option value="${esc(o.value)}" ${String(o.value)===String(val)?'selected':''}>${esc(o.label)}</option>`).join('')}</select></div>`}
 
-function editorFields(e={}){
+function editorFields(e={},isEdit=false){
   const agencies=['FMCSA','FAA','FRA','FTA','PHMSA','USCG'];
   return `<div class="employer-form-sections">
     <div class="employer-form-section"><h3>Company</h3><div class="modal-grid">
+      ${!isEdit?select('company_type','Company type',value(e,'company_type')||'employer',[{value:'employer',label:'Employer'},{value:'owner_operator_no_driver',label:'Owner-Operator — not a driver'},{value:'owner_operator_driver',label:'Owner-Operator — also the driver'}],true):''}
       ${input('legal_name','Legal company name',value(e,'legal_name'),'text',false,true)}
       ${input('dba_name','DBA / trade name',value(e,'dba_name'))}
       ${input('dot_number','USDOT number',value(e,'dot_number'))}
@@ -50,6 +52,24 @@ function editorFields(e={}){
       ${input('billing_contact_name','Billing contact',value(e,'billing_contact_name'))}
       ${input('billing_contact_email','Billing email',value(e,'billing_contact_email'),'email')}
     </div></div>
+    <div class="employer-form-section" data-owner-driver-section hidden><h3>Owner-Operator Driver</h3><p class="section-help">This person will be created as a normal DOT driver and enrolled in the C/TPA's FMCSA consortium pool.</p><div class="modal-grid">
+      ${input('driver_first_name','Driver first name',value(e,'driver_first_name'))}
+      ${input('driver_middle_name','Driver middle name',value(e,'driver_middle_name'))}
+      ${input('driver_last_name','Driver last name',value(e,'driver_last_name'))}
+      ${input('driver_date_of_birth','Date of birth',value(e,'driver_date_of_birth'),'date')}
+      ${input('driver_email','Driver email',value(e,'driver_email'),'email')}
+      ${input('driver_mobile','Driver mobile',value(e,'driver_mobile'),'tel')}
+      ${input('driver_cdl_number','CDL number',value(e,'driver_cdl_number'))}
+      ${input('driver_cdl_state','CDL state',value(e,'driver_cdl_state'))}
+      ${input('driver_hire_date','Hire / effective date',value(e,'driver_hire_date'),'date')}
+      ${input('driver_job_title','Job title',value(e,'driver_job_title')||'Owner-Operator Driver')}
+      ${input('driver_address_line1','Driver address line 1',value(e,'driver_address_line1'),'text',true)}
+      ${input('driver_address_line2','Driver address line 2',value(e,'driver_address_line2'),'text',true)}
+      ${input('driver_city','Driver city',value(e,'driver_city'))}
+      ${input('driver_state','Driver state',value(e,'driver_state'))}
+      ${input('driver_postal_code','Driver ZIP / postal code',value(e,'driver_postal_code'))}
+      ${input('driver_country','Driver country',value(e,'driver_country')||'US')}
+    </div></div>
     <div class="employer-form-section"><h3>Address</h3><div class="modal-grid">
       ${input('address_line1','Address line 1',value(e,'address_line1'),'text',true)}
       ${input('address_line2','Address line 2',value(e,'address_line2'),'text',true)}
@@ -65,16 +85,36 @@ function editorFields(e={}){
 
 function openEmployerEditor(e,afterSave){
   const isEdit=!!e?.id;
-  const b=modalFrame(isEdit?'Edit Employer':'Add Employer',isEdit?'Update the company record managed by your C/TPA account.':'Create a client company and enable its DOT Employer Portal.',`<form data-employer-form>${editorFields(e)}</form>`,`<div class="modal-actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="submit" form="none" data-save-employer>${isEdit?'Save Changes':'Create Employer'}</button></div>`);
+  const b=modalFrame(isEdit?'Edit Employer':'Add Employer',isEdit?'Update the company record managed by your C/TPA account.':'Create a client company and enable its DOT Employer Portal.',`<form data-employer-form>${editorFields(e,isEdit)}</form>`,`<div class="modal-actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="submit" form="none" data-save-employer>${isEdit?'Save Changes':'Create Employer'}</button></div>`);
   const save=$('[data-save-employer]',b),form=$('[data-employer-form]',b);
+  const companyType=form.elements.company_type,driverSection=$('[data-owner-driver-section]',form);
+  const syncCompanyType=()=>{
+    const driver=companyType?.value==='owner_operator_driver';
+    if(driverSection)driverSection.hidden=!driver;
+    ['driver_first_name','driver_last_name','driver_cdl_number','driver_cdl_state'].forEach(name=>{const el=form.elements[name];if(el)el.required=driver});
+  };
+  companyType?.addEventListener('change',syncCompanyType);syncCompanyType();
   save.onclick=async()=>{if(!form.reportValidity())return;setBusy(save,true,isEdit?'Save Changes':'Create Employer');try{const employer=Object.fromEntries(new FormData(form).entries());if(isEdit)employer.id=e.id;const r=await window.Portal.invoke('workforce-ctpa-employers',{action:'save_employer',employer});toast(isEdit?'Employer updated.':'Employer created.');closeModal();await afterSave?.(r.employer||employer,!isEdit)}catch(err){setBusy(save,false,isEdit?'Save Changes':'Create Employer');setModalError(b,err.message||String(err))}};
 }
 
-function openInvite(employer,roles,afterSave){
+async function openInvite(employer,roles,afterSave){
+  // Always refresh this Employer from the portal API before showing invite data.
+  // The database is the source of truth; never rely on a stale object already in the browser.
+  try{
+    const fresh=await window.Portal.invoke('workforce-ctpa-employers',{action:'workspace'});
+    employer=(fresh.employers||[]).find(x=>String(x.id)===String(employer.id))||employer;
+  }catch(err){
+    console.warn('Unable to refresh Employer before invite; using current portal record.',err);
+  }
   const opts=(roles||[]).map(r=>({value:r.code,label:r.name||pretty(r.code)}));
-  const b=modalFrame('Invite Employer User',`Send access to ${employer.legal_name||'this employer'} in the Employer portal for its assigned DOT agency.`,`<form data-invite-form><div class="modal-grid">${input('first_name','First name','', 'text',false,true)}${input('last_name','Last name','', 'text',false,true)}${input('email','Email address','', 'email',true,true)}${select('role_code','Portal role','employer_admin',opts,true)}</div><div class="invite-note">New users receive an account invitation by email. Existing screenings4u users are granted access to this Employer Portal account.</div></form>`,`<div class="modal-actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="button" data-send-invite>Send Invite</button></div>`);
+  const fullName=String(employer.primary_contact_name||'').trim();
+  const parts=fullName.split(/\s+/).filter(Boolean),first=parts.shift()||'',last=parts.join(' ');
+  const email=String(employer.primary_contact_email||'').trim();
+  const locked=(name,label,val,type='text',full=false)=>`<div class="field ${full?'full':''}"><label>${esc(label)}</label><input name="${esc(name)}" type="${esc(type)}" value="${esc(val)}" readonly aria-readonly="true" class="invite-locked"><small class="invite-locked-help">Edit this information from the Employer record.</small></div>`;
+  const b=modalFrame('Invite Employer User',`Send access to ${employer.legal_name||'this employer'} in the Employer portal for its assigned DOT agency.`,`<form data-invite-form><div class="modal-grid">${locked('first_name','First name',first)}${locked('last_name','Last name',last)}${locked('email','Email address',email,'email',true)}${select('role_code','Portal role','employer_admin',opts,true)}</div><div class="invite-note">Contact information comes from the saved Employer record and cannot be changed here. Close this window and edit the Employer if the name or email needs to change.</div></form>`,`<div class="modal-actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="button" data-send-invite>Send Invite</button></div>`);
   const btn=$('[data-send-invite]',b),form=$('[data-invite-form]',b);
-  btn.onclick=async()=>{if(!form.reportValidity())return;setBusy(btn,true,'Send Invite');try{const member=Object.fromEntries(new FormData(form).entries());const r=await window.Portal.invoke('workforce-ctpa-employers',{action:'invite_member',employer_id:employer.id,member});toast(r.invited?'Invitation email sent.':'Portal access granted to existing user.');closeModal();await afterSave?.()}catch(err){setBusy(btn,false,'Send Invite');setModalError(b,err.message||String(err))}};
+  if(!first||!last||!email){setModalError(b,'The Employer record needs a complete primary contact name and email before an invite can be sent.');btn.disabled=true}
+  btn.onclick=async()=>{if(!form.reportValidity())return;setBusy(btn,true,'Send Invite');try{const member=Object.fromEntries(new FormData(form).entries());const r=await window.Portal.invoke('workforce-ctpa-employers',{action:'invite_member',employer_id:employer.id,member});toast(r.email_delivery==='resend'?(r.invited?'Branded invitation sent through Resend.':'Portal access granted and confirmation sent through Resend.'):'Employer Portal access updated.');closeModal();await afterSave?.()}catch(err){setBusy(btn,false,'Send Invite');setModalError(b,err.message||String(err))}};
 }
 
 function parseCsv(text){const rows=[];let row=[],cell='',q=false;for(let i=0;i<text.length;i++){const ch=text[i],next=text[i+1];if(ch==='"'){if(q&&next==='"'){cell+='"';i++}else q=!q}else if(ch===','&&!q){row.push(cell.trim());cell=''}else if((ch==='\n'||ch==='\r')&&!q){if(ch==='\r'&&next==='\n')i++;row.push(cell.trim());cell='';if(row.some(v=>v!==''))rows.push(row);row=[]}else cell+=ch}row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);if(rows.length<2)return[];const h=rows[0].map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''));return rows.slice(1).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]??''])))}
@@ -91,27 +131,56 @@ function details(employer,roles,canManage,canManageUsers,afterRefresh){
   const members=employer.account_members||[];
   const memberRows=members.length?members.map(m=>`<div class="employer-member-row"><div><strong>${esc(personName(m))}</strong><span>${esc(m.profiles?.email||'No email')} · ${esc(roleName(m,roles))}</span></div><div class="employer-member-meta">${badge(m.status)}<small>${m.accepted_at?'Active since '+fmt(m.accepted_at):'Invite pending'}</small></div>${canManageUsers?`<button class="mini-btn" type="button" data-member="${esc(m.id)}">Manage</button>`:''}</div>`).join(''):'<div class="empty">No Employer Portal users have been invited yet.</div>';
   const b=modalFrame(employer.legal_name||'Employer',employer.dba_name||'DOT Employer account',`<div class="employer-detail-grid">
-    <div class="employer-detail-card"><small>Status</small>${badge(employer.status)}</div><div class="employer-detail-card"><small>DOT agency</small><strong>${esc(employer.applicable_dot_agency||'—')}</strong></div><div class="employer-detail-card"><small>USDOT</small><strong>${esc(employer.dot_number||'—')}</strong></div><div class="employer-detail-card"><small>Covered people</small><strong>${Number(employer.employee_count_live||0)}</strong></div>
-  </div><div class="employer-company-info"><div><small>Primary contact</small><strong>${esc(employer.primary_contact_name||'—')}</strong><span>${esc(employer.primary_contact_email||'—')}</span></div><div><small>Phone</small><strong>${esc(employer.phone||'—')}</strong><span>${esc(employer.website||'')}</span></div><div><small>Address</small><strong>${esc([employer.address_line1,employer.address_line2].filter(Boolean).join(', ')||'—')}</strong><span>${esc([employer.city,employer.state,employer.postal_code].filter(Boolean).join(', '))}</span></div></div><div class="employer-users-head"><div><h3>Employer Portal Users</h3><p>Users below access this company at employer-dot.screenings4u.com.</p></div>${canManageUsers?'<button class="btn primary" type="button" data-invite-user>Invite User</button>':''}</div><div class="employer-members">${memberRows}</div>`,`<div class="modal-actions"><button class="btn ghost" type="button" data-close>Close</button>${canManage?'<button class="btn secondary employer-edit-action" type="button" data-edit-employer>Edit Company</button>':''}</div>`);
-  $('[data-edit-employer]',b)?.addEventListener('click',()=>openEmployerEditor(employer,async()=>{await afterRefresh()}));
+    <div class="employer-detail-card"><small>Status</small>${badge(employerStatus(employer))}</div><div class="employer-detail-card"><small>DOT agency</small><strong>${esc(employer.applicable_dot_agency||'—')}</strong></div><div class="employer-detail-card"><small>USDOT</small><strong>${esc(employer.dot_number||'—')}</strong></div><div class="employer-detail-card"><small>Covered people</small><strong>${Number(employer.employee_count_live||0)}</strong></div>
+  </div><div class="employer-company-info"><div><small>Primary contact</small><strong>${esc(employer.primary_contact_name||'—')}</strong><span>${esc(employer.primary_contact_email||'—')}</span></div><div><small>Phone</small><strong>${esc(employer.phone||'—')}</strong><span>${esc(employer.website||'')}</span></div><div><small>Address</small><strong>${esc([employer.address_line1,employer.address_line2].filter(Boolean).join(', ')||'—')}</strong><span>${esc([employer.city,employer.state,employer.postal_code].filter(Boolean).join(', '))}</span></div></div><div class="employer-users-head"><div><h3>Employer Portal Users</h3><p>Users below access this company at employer-dot.screenings4u.com.</p></div>${canManageUsers&&!employer.archived_at?'<button class="btn primary" type="button" data-invite-user>Invite User</button>':''}</div><div class="employer-members">${memberRows}</div>`,`<div class="modal-actions"><button class="btn ghost" type="button" data-close>Close</button>${canManage?(employer.archived_at?'<button class="btn primary" type="button" data-restore-employer>Restore Employer</button><button class="btn secondary employer-edit-action" type="button" data-edit-employer>Edit Company</button>':'<button class="btn danger" type="button" data-archive-employer>Archive Employer</button><button class="btn secondary employer-edit-action" type="button" data-edit-employer>Edit Company</button>'):''}</div>`);
+  $('[data-edit-employer]',b)?.addEventListener('click',()=>{location.href=`/employer-form.html?id=${encodeURIComponent(employer.id)}`});
   $('[data-invite-user]',b)?.addEventListener('click',()=>openInvite(employer,roles,afterRefresh));
+  $('[data-archive-employer]',b)?.addEventListener('click',async()=>{
+    const confirmFn=window.S4UDialog?.confirm||window.PortalUI?.confirm;
+    const ok=confirmFn?await confirmFn(`Archive ${employer.legal_name||'this employer'}?\n\nThe employer will be removed from active C/TPA views and Employer Portal access will be disabled. Employees, testing, documents, invoices, compliance history, and other Supabase records will be preserved.`,{title:'Archive Employer',confirmText:'Archive Employer',cancelText:'Cancel',danger:true}):false;
+    if(!ok)return;
+    const btn=$('[data-archive-employer]',b);
+    setBusy(btn,true,'Archive Employer');
+    try{
+      await window.Portal.invoke('workforce-ctpa-employers',{action:'archive_employer',employer_id:employer.id});
+      closeModal();
+      toast('Employer archived.');
+      await afterRefresh?.();
+    }catch(err){
+      setBusy(btn,false,'Archive Employer');
+      setModalError(b,err.message||String(err));
+    }
+  });
+  $('[data-restore-employer]',b)?.addEventListener('click',async()=>{
+    const confirmFn=window.PortalDialogs?.confirm;
+    const ok=confirmFn?await confirmFn(`Restore ${employer.legal_name||'this employer'}?\n\nThe employer will return to active C/TPA management and its Employer Portal access and sponsored subscription will be re-enabled.`,{title:'Restore Employer',confirmText:'Restore Employer',cancelText:'Cancel'}):false;
+    if(!ok)return;
+    const btn=$('[data-restore-employer]',b);
+    setBusy(btn,true,'Restore Employer');
+    try{
+      await window.Portal.invoke('workforce-ctpa-employers',{action:'restore_employer',employer_id:employer.id});
+      toast('Employer restored.');
+      closeModal();
+      await afterRefresh?.();
+    }catch(err){setBusy(btn,false,'Restore Employer');setModalError(b,err.message||String(err))}
+  });
   $$('[data-member]',b).forEach(btn=>btn.onclick=()=>{const m=members.find(x=>String(x.id)===btn.dataset.member);if(m)openMemberEditor(employer,m,roles,afterRefresh)});
 }
 
 function render(d){
-  const employers=d.employers||[],members=employers.flatMap(e=>e.account_members||[]),active=employers.filter(e=>norm(e.status)==='active').length,onboarding=employers.filter(e=>norm(e.status)==='onboarding').length,pending=members.filter(m=>!m.accepted_at).length;
-  const rows=employers.length?employers.map(e=>{const ms=e.account_members||[],activeUsers=ms.filter(m=>norm(m.status)==='active').length;return `<tr data-employer-row data-search="${esc([e.legal_name,e.dba_name,e.dot_number,e.primary_contact_email,e.applicable_dot_agency,e.state].filter(Boolean).join(' ').toLowerCase())}" data-status="${esc(norm(e.status))}" data-agency="${esc(e.applicable_dot_agency||'')}"><td><strong>${esc(e.legal_name||'Employer')}</strong><small>${esc(e.dba_name||([e.city,e.state].filter(Boolean).join(', ')||'Client company'))}</small></td><td>${badge(e.status)}</td><td><strong>${esc(e.applicable_dot_agency||'—')}</strong><small>${e.dot_number?`USDOT ${esc(e.dot_number)}`:'No USDOT entered'}</small></td><td><strong>${esc(e.primary_contact_name||'—')}</strong><small>${esc(e.primary_contact_email||'No email')}</small></td><td><strong>${Number(e.employee_count_live||0)}</strong><small>covered people</small></td><td><strong>${activeUsers}</strong><small>${ms.length?`${ms.length} portal user${ms.length===1?'':'s'}`:'No portal users'}</small></td><td><button class="mini-btn primary" type="button" data-manage-employer="${esc(e.id)}">Manage</button></td></tr>`}).join(''):'<tr><td colspan="7"><div class="empty">No employers have been added yet. Use Add Employer to create the first client company.</div></td></tr>';
+  const employers=d.employers||[],members=employers.flatMap(e=>e.account_members||[]),active=employers.filter(e=>!e.archived_at&&norm(e.status)==='active').length,onboarding=employers.filter(e=>!e.archived_at&&norm(e.status)==='onboarding').length,archived=employers.filter(e=>!!e.archived_at).length,pending=members.filter(m=>m.status==='active'&&!m.accepted_at).length;
+  const rows=employers.length?employers.map(e=>{const ms=e.account_members||[],activeUsers=ms.filter(m=>norm(m.status)==='active').length;return `<tr data-employer-row data-search="${esc([e.legal_name,e.dba_name,e.dot_number,e.primary_contact_email,e.applicable_dot_agency,e.state].filter(Boolean).join(' ').toLowerCase())}" data-status="${esc(employerStatus(e))}" data-agency="${esc(e.applicable_dot_agency||'')}"><td><strong>${esc(e.legal_name||'Employer')}</strong><small>${esc(e.dba_name||([e.city,e.state].filter(Boolean).join(', ')||'Client company'))}</small></td><td>${badge(employerStatus(e))}</td><td><strong>${esc(e.applicable_dot_agency||'—')}</strong><small>${e.dot_number?`USDOT ${esc(e.dot_number)}`:'No USDOT entered'}</small></td><td><strong>${esc(e.primary_contact_name||'—')}</strong><small>${esc(e.primary_contact_email||'No email')}</small></td><td><strong>${Number(e.employee_count_live||0)}</strong><small>covered people</small></td><td><strong>${e.archived_at?0:activeUsers}</strong><small>${e.archived_at?'Portal access disabled':(ms.length?`${ms.length} portal user${ms.length===1?'':'s'}`:'No portal users')}</small></td><td><button class="mini-btn primary" type="button" data-manage-employer="${esc(e.id)}">Manage</button></td></tr>`}).join(''):'<tr><td colspan="7"><div class="empty">No employers have been added yet. Use Add Employer to create the first client company.</div></td></tr>';
   const agencies=[...new Set(employers.map(e=>e.applicable_dot_agency).filter(Boolean))].sort();
-  return `<div class="metrics employer-metrics"><div class="metric"><small>Client Employers</small><strong>${employers.length}</strong><span>Companies managed by this C/TPA</span></div><div class="metric"><small>Active</small><strong>${active}</strong><span>Employer accounts in active status</span></div><div class="metric"><small>Onboarding</small><strong>${onboarding}</strong><span>Companies still being set up</span></div><div class="metric"><small>Pending Invites</small><strong>${pending}</strong><span>Employer Portal users not yet accepted</span></div></div>
-  <div class="section panel"><div class="panel-head employer-panel-head"><div><h2>Managed Employers</h2><p>Create the company, maintain its DOT account details, and control Employer Portal access.</p></div><span class="badge">${employers.length} employer${employers.length===1?'':'s'}</span></div><div class="employers-toolbar"><div class="employers-search"><input type="search" id="employer-search" placeholder="Search employer, USDOT, contact…"><select id="employer-status"><option value="">All statuses</option><option value="active">Active</option><option value="onboarding">Onboarding</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select><select id="employer-agency"><option value="">All DOT agencies</option>${agencies.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('')}</select></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" type="button" data-bulk-employers>Bulk CSV</button><button class="btn primary" type="button" data-add-employer>Add Employer</button></div></div><div class="table-wrap"><table class="employers-table"><thead><tr><th>Employer</th><th>Status</th><th>DOT Program</th><th>Primary Contact</th><th>People</th><th>Portal Access</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  return `<div class="metrics employer-metrics"><div class="metric"><small>Client Employers</small><strong>${employers.length}</strong><span>Companies managed by this C/TPA</span></div><div class="metric"><small>Active</small><strong>${active}</strong><span>Employer accounts in active status</span></div><div class="metric"><small>Onboarding</small><strong>${onboarding}</strong><span>Companies still being set up</span></div><div class="metric"><small>Archived</small><strong>${archived}</strong><span>Employers retained for history and restoration</span></div><div class="metric"><small>Pending Invites</small><strong>${pending}</strong><span>Employer Portal users not yet accepted</span></div></div>
+  <div class="section panel"><div class="panel-head employer-panel-head"><div><h2>Managed Employers</h2><p>Create the company, maintain its DOT account details, and control Employer Portal access.</p></div><span class="badge">${employers.length} employer${employers.length===1?'':'s'}</span></div><div class="employers-toolbar"><div class="employers-search"><input type="search" id="employer-search" placeholder="Search employer, USDOT, contact…"><select id="employer-status"><option value="">All statuses</option><option value="active">Active</option><option value="onboarding">Onboarding</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option><option value="archived">Archived</option></select><select id="employer-agency"><option value="">All DOT agencies</option>${agencies.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('')}</select></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" type="button" data-bulk-employers>Bulk CSV</button><button class="btn primary" type="button" data-add-employer>Add Employer</button></div></div><div class="table-wrap"><table class="employers-table"><thead><tr><th>Employer</th><th>Status</th><th>DOT Program</th><th>Primary Contact</th><th>People</th><th>Portal Access</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function bind(d){
   const employers=d.employers||[],roles=d.roles||[],canManage=d.can_manage!==false,canManageUsers=d.can_manage_users!==false;
   const refresh=async()=>window.Portal.refresh();
-  const actions=$('#actions');if(actions){actions.innerHTML='';if(canManage){const bulk=document.createElement('button');bulk.className='btn secondary';bulk.textContent='Bulk CSV';bulk.onclick=()=>openBulkImport(refresh);actions.appendChild(bulk);const add=document.createElement('button');add.className='btn primary';add.textContent='Add Employer';add.onclick=()=>openEmployerEditor({},async(e,created)=>{await refresh();if(created&&canManageUsers&&e?.id)setTimeout(()=>{const latest=(window.CtpaEmployers._lastData?.employers||[]).find(x=>x.id===e.id)||e;openInvite(latest,roles,refresh)},100)});actions.appendChild(add)}}
+  const actions=$('#actions');if(actions){actions.innerHTML='';if(canManage){const bulk=document.createElement('button');bulk.className='btn secondary';bulk.textContent='Bulk CSV';bulk.onclick=()=>openBulkImport(refresh);actions.appendChild(bulk);const add=document.createElement('a');add.className='btn primary';add.textContent='Add Employer';add.href='/employer-form.html';actions.appendChild(add)}}
   $('[data-bulk-employers]')?.addEventListener('click',()=>openBulkImport(refresh));
-  $('[data-add-employer]')?.addEventListener('click',()=>openEmployerEditor({},async(e,created)=>{await refresh();if(created&&canManageUsers&&e?.id){const latest=(window.CtpaEmployers._lastData?.employers||[]).find(x=>x.id===e.id)||e;openInvite(latest,roles,refresh)}}));
+  $('[data-add-employer]')?.addEventListener('click',()=>{location.href='/employer-form.html'});
   $$('[data-manage-employer]').forEach(btn=>btn.onclick=()=>{const e=employers.find(x=>String(x.id)===btn.dataset.manageEmployer);if(e)details(e,roles,canManage,canManageUsers,refresh)});
   const search=$('#employer-search'),status=$('#employer-status'),agency=$('#employer-agency');
   const filter=()=>{const q=String(search?.value||'').trim().toLowerCase(),st=status?.value||'',ag=agency?.value||'';$$('[data-employer-row]').forEach(r=>{const ok=(!q||r.dataset.search.includes(q))&&(!st||r.dataset.status===st)&&(!ag||r.dataset.agency===ag);r.hidden=!ok})};

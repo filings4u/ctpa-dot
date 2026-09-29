@@ -39,7 +39,7 @@ function bind(d){
  data=d;const a=$('#actions');if(!a)return;a.innerHTML='';
  if(d.can_manage){
    const assign=document.createElement('button');assign.className='btn secondary';assign.textContent='Assign Existing';assign.disabled=!(d.available||[]).length;assign.onclick=assignOwner;a.appendChild(assign);
-   const add=document.createElement('button');add.className='btn primary';add.textContent='Add Owner-Operator';add.onclick=createOwner;a.appendChild(add);
+   const add=document.createElement('button');add.className='btn primary';add.textContent='Add through Employers';add.onclick=()=>{location.href='employers.html'};a.appendChild(add);
  }
 }
 window.CtpaOwnerOperators={render,bind};

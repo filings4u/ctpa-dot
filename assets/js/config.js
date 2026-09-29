@@ -27,32 +27,41 @@ window.PORTAL_CONFIG=Object.freeze({"domain":"ctpa-dot.screenings4u.com","portal
 })();
 
 
+
 ;(()=>{
-  const R=window.PORTAL_RUNTIME=Object.freeze({"session":"ctpa-dot-session","actions":"ctpa-dot-actions","distribution":"ctpa-dot-distribution"});
+  const API='ctpa-dot';
+  window.PORTAL_RUNTIME=Object.freeze({api:API,session:API,actions:API,distribution:API});
   const C=window.PORTAL_CONFIG||window.S4U||{};
-  C.runtimeFunctions=R;
-  if(window.__S4U_ISOLATED_FETCH_PATCHED__)return;
-  window.__S4U_ISOLATED_FETCH_PATCHED__=true;
+  C.runtimeFunctions=window.PORTAL_RUNTIME;
+  if(window.__S4U_CTPA_API_FETCH_PATCHED__)return;
+  window.__S4U_CTPA_API_FETCH_PATCHED__=true;
   const baseFetch=window.fetch.bind(window);
-  const knownSession=new Set(['dot-session-context']);
-  const knownDistribution=new Set(['dot-distribution-runtime']);
-  const knownCatalog=new Set(['portal-order-catalog']);
   window.fetch=function(input,init){
     try{
-      let raw=typeof input==='string'?input:(input?.url||'');
+      const raw=typeof input==='string'?input:(input?.url||'');
       if(!raw||!raw.includes('/functions/v1/'))return baseFetch(input,init);
       const u=new URL(raw,location.href),parts=u.pathname.split('/'),idx=parts.indexOf('v1');
       if(idx<0||!parts[idx+1])return baseFetch(input,init);
-      const original=parts[idx+1]; let target=original,routeToActions=false;
-      if(knownSession.has(original))target=R.session;
-      else if(knownDistribution.has(original))target=R.distribution;
-      else if(knownCatalog.has(original)){target=R.actions;routeToActions=true;}
-      else if(original.startsWith('workforce-')||original==='dot-portal-actions'){target=R.actions;routeToActions=true;}
-      if(target===original)return baseFetch(input,init);
-      parts[idx+1]=target;u.pathname=parts.join('/');
+      const original=parts[idx+1];
+      let targetPath=null,legacyEndpoint=null;
+      if(original==='ctpa-dot')return baseFetch(input,init);
+      if(original==='ctpa-dot-session'||original==='dot-session-context')targetPath='ctpa-dot/session';
+      else if(original==='ctpa-dot-distribution'||original==='dot-distribution-runtime')targetPath='ctpa-dot/distribution';
+      else if(original==='ctpa-dot-actions'||original==='dot-portal-actions'||original==='portal-order-catalog'||original.startsWith('workforce-')){targetPath='ctpa-dot';legacyEndpoint=original;}
+      else return baseFetch(input,init);
+      const before=parts.slice(0,idx+1).join('/');
+      u.pathname=before+'/'+targetPath;
       const i=init?{...init}:{};
-      if(i.body&&typeof i.body==='string'){try{const b=JSON.parse(i.body);b.portal_code="ctpa_dot";b.requested_portal_code="ctpa_dot";if(routeToActions&&!b.legacy_endpoint)b.legacy_endpoint=original;i.body=JSON.stringify(b)}catch{}}
+      if(i.body&&typeof i.body==='string'){
+        try{
+          const b=JSON.parse(i.body);
+          b.portal_code='ctpa_dot';
+          b.requested_portal_code='ctpa_dot';
+          if(legacyEndpoint&&!b.legacy_endpoint)b.legacy_endpoint=legacyEndpoint;
+          i.body=JSON.stringify(b);
+        }catch{}
+      }
       return baseFetch(u.toString(),i);
-    }catch(e){return baseFetch(input,init)}
+    }catch{return baseFetch(input,init)}
   };
 })();
