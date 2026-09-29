@@ -2,7 +2,7 @@
 const $=(s,r=document)=>r.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),qs=k=>new URLSearchParams(location.search).get(k)||'';
 const selected=(a,b)=>String(a??'')===String(b??'')?'selected':'';
 function render(d){
-  const employers=(d.employers||[]).filter(e=>!e.archived_at&&['active','onboarding'].includes(String(e.status))), id=qs('id'), preset=qs('employer_id');
+  const employers=(d.employers||[]).filter(e=>!e.archived_at&&String(e.status)==='active'), id=qs('id'), preset=qs('employer_id');
   const person=id?(d.employees||[]).find(x=>String(x.id)===id):null;
   const title=person?'Edit Person':'Add Person', employerId=person?.employer_id||preset, type=person?.workforce_worker_type||'employee';
   return `<section class="panel section"><div class="panel-head"><div><h2>${title}</h2><p>Every person must be assigned to the Employer they work for.</p></div><a class="btn secondary" href="/people.html">Back to People</a></div>

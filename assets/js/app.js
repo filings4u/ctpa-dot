@@ -32,10 +32,10 @@ let NAV=[];
 function buildNavigation(ctx={}){
   const e=ctx.entitlements||{};
   const items=[
-    ['dashboard','Dashboard','⌂',null],['onboarding','Getting Started','✓',null],
+    ['dashboard','Dashboard','⌂',null],
     ['employers','1. Employers','▣','employer_management'],['people','2. People','●','employee_management'],['programs','3. Programs','◎','programs'],
     ['pools','4. Pools','◉','consortium_pools'],['selections','5. Selections','↻','random_selections'],['testing','6. Testing','◆','testing_orders'],['results','7. Results','✓','results_summary'],
-    ['owner-operators','Owner-Operators','◈','employer_management'],['compliance','Compliance','◇','compliance'],['testing-documents','Testing Documents','▤','documents'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Notifications','✉','notifications'],
+['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Notifications','✉','notifications'],
     ['order-services','Order Services','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
     ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit History','◷','audit_history'],['support','Support','? ',null]
   ];
@@ -211,7 +211,9 @@ async function ctpaData(p){
   if(p==='results')return invoke('workforce-ctpa-results',{action:'workspace'});
   if(p==='result_detail'){const id=new URLSearchParams(location.search).get('id')||'';return invoke('workforce-ctpa-results',{action:'get_report',report_id:id});}
   if(p==='compliance')return invoke('workforce-ctpa-compliance',{action:'workspace'});
-  if(p==='documents'||p==='testing_documents'||p==='testing_document_edit')return invoke('workforce-ctpa-documents',{action:'workspace'});
+  if(p==='documents')return invoke('workforce-ctpa-documents',{action:'workspace'});
+  if(p==='reports'||p==='report_generate')return invoke('workforce-ctpa-reports',{action:'workspace'});
+  if(p==='report_view'||p==='report_archive'){const id=new URLSearchParams(location.search).get('id')||'';return invoke('workforce-ctpa-reports',{action:'get_report',report_id:id});}
   if(p==='notifications')return invoke('workforce-ctpa-notifications',{action:'workspace'});
   if(p==='order_history')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'order-history'});
   if(p==='subscription')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'subscription'});
@@ -398,27 +400,11 @@ async function render(ctx){
   let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
   if(isUtilityPage(p))d=await utilityData(p);
-  if(C.kind==='ctpa'&&p==='dashboard'&&!localStorage.getItem('s4u_ctpa_dot_onboarding_seen')&&Array.isArray(d?.employers)&&d.employers.length===0){location.replace('/onboarding.html');return;}
   if(C.kind==='self')setSubtitle('View your own records and complete only the actions assigned to you.');
   else if(C.kind==='agency')setSubtitle(`${C.agency} company management workspace. Changes apply only to your company.`);
   else setSubtitle(p==='dashboard'?'Company-wide snapshot of employers, testing, randoms, compliance, billing, and recent activity.':'Manage your company records, people, programs, testing and compliance.');
   let html='';
   if(isUtilityPage(p))html=renderUtilityPage(p,d);
-  else if(C.kind==='ctpa'&&p==='onboarding'){
-    setSubtitle('Set up the core C/TPA workspace and start managing your Employer customers.');
-    const e=ctx.entitlements||{},steps=[
-      ['1. Add Employers','Create each client company before adding people.','/employers.html',e.employer_management===true],
-      ['2. Add People','Add employees, drivers, contractors, and staff to the Employer they work for.','/people.html',e.employee_management===true],
-      ['3. Create Programs','Create C/TPA programs and assign Employers to them.','/programs.html',e.programs===true],
-      ['4. Configure Pools','Create pools and add eligible safety-sensitive people from Employers assigned to the Program.','/pools.html',e.consortium_pools===true],
-      ['5. Run Selections','Run locked random selections from the current eligible pool population.','/selections.html',e.random_selections===true],
-      ['6. Order Testing','Order and schedule screenings4u tests for people whose Employer is assigned to the Program.','/testing.html',e.testing_orders===true],
-      ['7. Review Results','View finalized screenings4u results and download the official report.','/results.html',e.results_summary===true],
-      ['Set Up Employer Billing','Configure remittance details and create client invoices.','/employer-billing.html',e.client_invoicing===true],
-      ['Customize Branding','Apply your C/TPA logo and colors to sponsored Employer portals.','/branding.html',e.white_label===true]
-    ].filter(x=>x[3]);
-    html=`<div class="notice"><strong>${esc(ctx.organization?.dba_name||ctx.organization?.legal_name||'C/TPA')} setup</strong><br>Your available setup steps are based on the active Supabase plan and entitlements.</div><div class="section cards">${steps.map((x,i)=>`<article class="card"><small>STEP ${i+1}</small><h3>${esc(x[0])}</h3><p>${esc(x[1])}</p><a class="btn primary" href="${esc(x[2])}">Open</a></article>`).join('')}</div><div class="section"><a class="btn secondary" id="finishOnboarding" href="/dashboard.html">Continue to Dashboard</a></div>`;
-  }
   else if(p==='dashboard')html=dashboard(ctx,d);
   else if(p==='order_services'){
     const cat=await serviceCatalog();
@@ -438,7 +424,6 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='program_form'&&window.CtpaProgramForm){setSubtitle('Create or edit a C/TPA DOT program.');html=window.CtpaProgramForm.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='program_detail'&&window.CtpaProgramDetail){setSubtitle('Manage Employers assigned to this DOT program.');html=window.CtpaProgramDetail.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing_order'&&window.CtpaTestingOrder){setSubtitle('Create a screenings4u DOT testing order.');html=window.CtpaTestingOrder.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='testing_documents'&&window.CtpaTestingDocuments){setSubtitle('View, edit, and archive testing-related documents.');html=window.CtpaTestingDocuments.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing_document_edit'&&window.CtpaTestingDocumentEdit){setSubtitle('Edit a C/TPA-owned testing document.');html=window.CtpaTestingDocumentEdit.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='result_detail'&&window.CtpaResultDetail){setSubtitle('View read-only finalized result details and download the official report.');html=window.CtpaResultDetail.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='owner_operators'&&window.CtpaOwnerOperators){setSubtitle('Manage Owner-Operator customers sponsored by this C/TPA.');html=window.CtpaOwnerOperators.render(d,ctx);}
@@ -447,8 +432,11 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='results'&&window.CtpaResults){setSubtitle('View finalized screenings4u results and download official reports.');html=window.CtpaResults.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='compliance'&&window.CtpaCompliance){setSubtitle('Monitor Employer compliance health, cases, documents, events, and communicate with client Employers.');html=window.CtpaCompliance.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments){setSubtitle('Manage private C/TPA documents and securely view Employer-uploaded documents.');html=window.CtpaDocuments.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports){setSubtitle('Analyze each client Employer across testing, random selections, compliance, documents, results, and operational activity.');html=window.CtpaReports.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments){setSubtitle('Upload private documents or send PDFs to Employer and Owner-Operator portals.');html=window.CtpaDocuments.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports){setSubtitle('Generate and manage DOT compliance reports across your entire C/TPA account.');html=window.CtpaReports.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='report_generate'&&window.CtpaReportGenerate){setSubtitle('Generate a DOT compliance report from the live C/TPA records.');html=window.CtpaReportGenerate.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='report_view'&&window.CtpaReportView){setSubtitle('View this generated report.');html=window.CtpaReportView.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='report_archive'&&window.CtpaReportArchive){setSubtitle('Archive this generated report.');html=window.CtpaReportArchive.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications){setSubtitle('Review inbox conversations, action-center items, and notification delivery history.');html=window.CtpaNotifications.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport){setSubtitle('Get help, create support requests, track ticket status, and find answers for common portal issues.');html=window.CtpaSupport.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='pool_form'&&window.CtpaPoolForm){setSubtitle('Configure the consortium Pool created from its Program.');html=window.CtpaPoolForm.render(d,ctx);}
@@ -485,7 +473,6 @@ async function render(ctx){
     wireManagementActions(p,d,ctx);
   }
   $('#content').innerHTML=html||`<div class="panel"><div class="empty">No data available.</div></div>`;
-  if(p==='onboarding')$('#finishOnboarding')?.addEventListener('click',()=>localStorage.setItem('s4u_ctpa_dot_onboarding_seen','1'));
   if(isUtilityPage(p))bindUtilityPage(p,d,ctx);
   if(p==='order_history'&&window.AccountOrderHistory)window.AccountOrderHistory.bind(d,ctx);
   if(p==='subscription'&&window.AccountSubscription)window.AccountSubscription.bind(d,ctx);
@@ -500,7 +487,6 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='program_form'&&window.CtpaProgramForm)window.CtpaProgramForm.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='program_detail'&&window.CtpaProgramDetail)window.CtpaProgramDetail.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='testing_order'&&window.CtpaTestingOrder)window.CtpaTestingOrder.bind(d,ctx);
-  if(C.kind==='ctpa'&&p==='testing_documents'&&window.CtpaTestingDocuments)window.CtpaTestingDocuments.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='testing_document_edit'&&window.CtpaTestingDocumentEdit)window.CtpaTestingDocumentEdit.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='result_detail'&&window.CtpaResultDetail)window.CtpaResultDetail.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='owner_operators'&&window.CtpaOwnerOperators)window.CtpaOwnerOperators.bind(d,ctx);
@@ -511,6 +497,9 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='compliance'&&window.CtpaCompliance)window.CtpaCompliance.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='documents'&&window.CtpaDocuments)window.CtpaDocuments.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='reports'&&window.CtpaReports)window.CtpaReports.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='report_generate'&&window.CtpaReportGenerate)window.CtpaReportGenerate.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='report_view'&&window.CtpaReportView)window.CtpaReportView.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='report_archive'&&window.CtpaReportArchive)window.CtpaReportArchive.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaNotifications)window.CtpaNotifications.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport)window.CtpaSupport.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='pool_form'&&window.CtpaPoolForm)window.CtpaPoolForm.bind(d,ctx);

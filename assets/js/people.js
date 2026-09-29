@@ -8,13 +8,13 @@ const employerLabel=e=>e?.legal_name||e?.dba_name||'Employer';
 
 function render(d){
   const people=(d.employees||[]).filter(x=>!x.archived_at);
-  const employers=(d.employers||[]).filter(e=>!e.archived_at&&['active','onboarding'].includes(String(e.status)));
+  const employers=(d.employers||[]).filter(e=>!e.archived_at&&String(e.status)==='active');
   return `<section class="panel people-directory">
     <div class="panel-head"><div><h2>Employer People Directory</h2><p>One row per managed Employer. Open an Employer to view its employees, drivers, staff, and contractors.</p></div><span class="badge" id="employerCount">${employers.length} ${employers.length===1?'employer':'employers'}</span></div>
     <div class="people-toolbar">
       <input id="employerSearch" type="search" placeholder="Search Employer, USDOT, city, state...">
       <select id="employerAgency"><option value="">All DOT Agencies</option><option>FMCSA</option><option>FAA</option><option>FRA</option><option>FTA</option><option>PHMSA</option><option>USCG</option></select>
-      <select id="employerStatus"><option value="">All Statuses</option><option value="active">Active</option><option value="onboarding">Onboarding</option><option value="inactive">Inactive</option></select>
+      <select id="employerStatus"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
       <a class="btn primary" href="/people-form.html">Add Person</a>
     </div>
     <div class="table-wrap"><table class="people-table"><thead><tr><th>Employer</th><th>Location</th><th>USDOT / Agency</th><th>People</th><th>Status</th><th></th></tr></thead><tbody id="employerRows"></tbody></table></div>
@@ -23,7 +23,7 @@ function render(d){
 
 function bind(d){
   const people=(d.employees||[]).filter(x=>!x.archived_at);
-  const employers=(d.employers||[]).filter(e=>!e.archived_at&&['active','onboarding'].includes(String(e.status)));
+  const employers=(d.employers||[]).filter(e=>!e.archived_at&&String(e.status)==='active');
   const renderRows=()=>{
     const q=String($('#employerSearch')?.value||'').trim().toLowerCase();
     const agency=$('#employerAgency')?.value||'';
