@@ -157,7 +157,7 @@ function utilityAuditView(d){
   if(d?.event){const x=d.event,p=x.actor_profile||{},em=x.employer||null;const before=x.before_data?`<pre class="audit-json">${esc(JSON.stringify(x.before_data,null,2))}</pre>`:'<div class="empty">No prior-state snapshot.</div>';const after=x.after_data?`<pre class="audit-json">${esc(JSON.stringify(x.after_data,null,2))}</pre>`:'<div class="empty">No resulting-state snapshot.</div>';const details=x.details&&Object.keys(x.details).length?`<pre class="audit-json">${esc(JSON.stringify(x.details,null,2))}</pre>`:'<div class="empty">No additional metadata.</div>';return `<div class="panel"><div class="panel-head"><div><h2>Audit Event Details</h2><p>Complete activity record for this event.</p></div><a class="mini-btn" href="/audit-history.html">Back to Audit & Log History</a></div><div class="detail-grid"><div><small>Date / Time</small><strong>${fmt(x.occurred_at||x.event_at)}</strong></div><div><small>Event</small><strong>${esc(pretty(x.event_type||x.action||'activity'))}</strong></div><div><small>Actor</small><strong>${esc([p.first_name,p.last_name].filter(Boolean).join(' ')||x.actor_name||x.actor_email||'System')}</strong></div><div><small>Actor Type</small><strong>${esc(pretty(x.actor_type||'system'))}</strong></div><div><small>Customer</small><strong>${esc(em?.dba_name||em?.legal_name||'C/TPA Account')}</strong></div><div><small>Portal</small><strong>${esc(pretty(x.source_portal||'unknown'))}</strong></div><div><small>Resource</small><strong>${esc(pretty(x.resource_type||'record'))}</strong><small>${esc(x.resource_id||'')}</small></div><div><small>Summary</small><strong>${esc(x.summary||pretty(x.action||'activity'))}</strong></div></div><div class="section"><h3>Before</h3>${before}</div><div class="section"><h3>After</h3>${after}</div><div class="section"><h3>Additional Details</h3>${details}</div></div>`}
   const rows=d.audit_events||d.events||[],s=d.summary||{};
   const body=rows.map(x=>{const actor=x.actor_profile||{},em=x.employer||null;return `<tr><td>${fmt(x.occurred_at||x.event_at)}</td><td><strong>${esc(pretty(x.event_type||x.action||'activity'))}</strong><small>${esc(x.summary||'')}</small></td><td><strong>${esc(utilityPersonName({...x,actor_profile:actor}))}</strong><small>${esc(pretty(x.actor_type||'system'))}</small></td><td>${esc(em?.dba_name||em?.legal_name||(x.actor_type==='ctpa_staff'?'C/TPA':'—'))}</td><td>${esc(pretty(x.resource_type||'record'))}<small>${esc(x.resource_id||'')}</small></td><td><a class="mini-btn" href="/audit-history.html?event_id=${encodeURIComponent(x.id)}">View</a></td></tr>`}).join('');
-  return `<div class="metrics"><div class="metric"><small>Total Activity</small><strong>${s.total??rows.length}</strong><span>Current audit scope</span></div><div class="metric"><small>Customer Activity</small><strong>${s.customer_activity??rows.filter(x=>x.actor_type==='customer').length}</strong><span>Employer and Owner-Operator activity</span></div><div class="metric"><small>C/TPA Activity</small><strong>${s.ctpa_activity??rows.filter(x=>x.actor_type==='ctpa_staff').length}</strong><span>Internal portal changes</span></div><div class="metric"><small>Logins</small><strong>${s.logins??rows.filter(x=>x.event_type==='auth.login').length}</strong><span>Recorded sign-ins</span></div></div><div class="panel section"><div class="panel-head"><div><h2>Audit & Log History</h2><p>Customer activity, staff changes, document activity, messages, testing, compliance, billing, integrations, and sign-in history.</p></div><span class="badge">${rows.length} event${rows.length===1?'':'s'}</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Actor</th><th>Customer</th><th>Resource</th><th>Actions</th></tr></thead><tbody>${body||'<tr><td colspan="6"><div class="empty">No audit or log events are available yet.</div></td></tr>'}</tbody></table></div></div>`;
+  return `<div class="metrics"><div class="metric"><small>Total Activity</small><strong>${s.total??rows.length}</strong><span>Current audit scope</span></div><div class="metric"><small>Customer Activity</small><strong>${s.customer_activity??rows.filter(x=>x.actor_type==='customer').length}</strong><span>Employer and Owner-Operator activity</span></div><div class="metric"><small>C/TPA Activity</small><strong>${s.ctpa_activity??rows.filter(x=>x.actor_type==='ctpa_staff').length}</strong><span>Internal portal changes</span></div><div class="metric"><small>Logins</small><strong>${s.logins??rows.filter(x=>x.event_type==='auth.login').length}</strong><span>Recorded sign-ins</span></div></div><div class="panel section"><div class="panel-head"><div><h2>Audit & Log History</h2><p>Customer activity, staff changes, document activity, messages, testing, compliance, billing, integrations, and sign-in history.</p></div><div class="table-actions"><span class="badge good">Live</span><span class="badge">${rows.length} event${rows.length===1?'':'s'}</span></div></div><div class="audit-toolbar"><input id="auditSearch" type="search" placeholder="Search activity, actor, customer, resource…"><select id="auditActorFilter"><option value="">All activity</option><option value="customer">Customer activity</option><option value="ctpa_staff">C/TPA staff activity</option><option value="system">System activity</option></select></div><div class="table-wrap"><table id="auditTable"><thead><tr><th>Date</th><th>Activity</th><th>Actor</th><th>Customer</th><th>Resource</th><th>Actions</th></tr></thead><tbody>${body||'<tr><td colspan="6"><div class="empty"><strong>Live audit logging is active.</strong><br>New customer and C/TPA activity will appear here automatically.</div></td></tr>'}</tbody></table></div></div>`;
 }
 function utilityLocationsView(d){
   const rows=d.locations||[],manage=d.access_mode==='manage'||d.can_manage===true;
@@ -196,9 +196,14 @@ function bindUtilityPage(p,d,ctx){
     addAction('Add Location',()=>openLocation({}));
     document.querySelectorAll('[data-location-id]').forEach(b=>b.onclick=()=>{const x=(d.locations||[]).find(y=>String(y.id)===String(b.dataset.locationId));if(x)openLocation(x)});
   }
-  if(p==='users-roles'){
-    const manage=d.access_mode==='manage'||d.can_manage===true;
-    if(manage&&C.kind==='ctpa'){const actions=document.querySelector('#actions');if(actions)actions.innerHTML='<a class="btn primary" href="/staff-form.html">Add Staff Member</a>';}
+  if(p==='audit-history'){
+    const search=document.getElementById('auditSearch'),actor=document.getElementById('auditActorFilter');
+    const apply=()=>{const q=String(search?.value||'').toLowerCase(),a=String(actor?.value||'');document.querySelectorAll('#auditTable tbody tr').forEach(tr=>{const txt=String(tr.textContent||'').toLowerCase();const actorTxt=String(tr.children?.[2]?.textContent||'').toLowerCase();const actorMatch=!a||(a==='customer'&&actorTxt.includes('customer'))||(a==='ctpa_staff'&&actorTxt.includes('ctpa staff'))||(a==='system'&&actorTxt.includes('system'));tr.hidden=!!q&&!txt.includes(q)||!actorMatch})};
+    if(search)search.oninput=apply;if(actor)actor.onchange=apply;
+  }
+  if(p==='users-roles'&&C.kind==='ctpa'){
+    const actions=document.querySelector('#actions');
+    if(actions)actions.innerHTML='<a class="btn primary" href="/staff-form.html">Add Staff Member</a>';
   }
   if(p==='integrations'&&d.can_manage&&C.kind==='ctpa'){
     document.querySelectorAll('[data-integration-id]').forEach(b=>b.onclick=()=>{const x=(d.integrations||[]).find(y=>String(y.id)===String(b.dataset.integrationId));if(!x)return;modal('Manage Integration',[{name:'status',label:'Status',type:'select',value:x.status||'inactive',options:[{value:'active',label:'Active'},{value:'inactive',label:'Inactive'},{value:'disabled',label:'Disabled'}]}],async v=>invoke('workforce-ctpa-admin',{action:'save_integration_status',integration:{id:x.id,status:v.status}}))});
@@ -531,10 +536,26 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='branding'&&window.CtpaBranding)window.CtpaBranding.bind(d,ctx);
 }
 
+
+let liveChannel=null,liveRenderTimer=null;
+function scheduleLiveRender(){
+  if(liveRenderTimer)clearTimeout(liveRenderTimer);
+  liveRenderTimer=setTimeout(async()=>{
+    if(!window.portalCtx)return;
+    const y=window.scrollY,active=document.activeElement,activeId=active?.id||null,selection=(active&&typeof active.selectionStart==='number')?[active.selectionStart,active.selectionEnd]:null;
+    try{await render(window.portalCtx)}catch(e){console.warn('Realtime render failed',e)}
+    requestAnimationFrame(()=>{window.scrollTo(0,y);if(activeId){const n=document.getElementById(activeId);if(n){n.focus({preventScroll:true});if(selection&&typeof n.setSelectionRange==='function')try{n.setSelectionRange(selection[0],selection[1])}catch{}}}});
+  },120);
+}
+function startRealtime(ctx){
+  try{if(liveChannel){sb.removeChannel(liveChannel);liveChannel=null}const ctpaId=ctx?.ctpa?.id||ctx?.ctpa_id||ctx?.subscription?.ctpa_id;if(!ctpaId)return;
+    liveChannel=sb.channel('ctpa-live-'+ctpaId).on('postgres_changes',{event:'INSERT',schema:'public',table:'ctpa_activity_events',filter:'ctpa_id=eq.'+ctpaId},()=>scheduleLiveRender()).subscribe();
+  }catch(e){console.warn('Realtime unavailable',e)}
+}
 async function init(){
-  try{const s=await getSession();if(!s){location.replace('/login.html');return}const ctx=await access();if(ctx.requires_workspace_selection){location.replace('/workspace.html');return}if(!ctx.has_access)throw new Error(ctx.reason||'Portal access denied.');saveMid(ctx.membership?.id);window.portalCtx=ctx;shell(ctx);await render(ctx)}
+  try{const s=await getSession();if(!s){location.replace('/login.html');return}const ctx=await access();if(ctx.requires_workspace_selection){location.replace('/workspace.html');return}if(!ctx.has_access)throw new Error(ctx.reason||'Portal access denied.');saveMid(ctx.membership?.id);window.portalCtx=ctx;shell(ctx);await render(ctx);startRealtime(ctx)}
   catch(e){if(e.status===401||e.message==='AUTH_REQUIRED'){await sb.auth.signOut();location.replace('/login.html');return}document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/login.html">Return to login</a></main>`}
 }
-window.Portal={invoke,sb,refresh:()=>render(window.portalCtx)};
+window.Portal={invoke,sb,refresh:async()=>Promise.resolve(),liveRefresh:scheduleLiveRender};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
