@@ -945,3 +945,159 @@ body[data-portal-page="notifications"] .chat-empty{padding:26px 14px;font-size:.
   body[data-portal-page="notifications"] .chat-status-row{width:100%}
   body[data-portal-page="notifications"] .chat-status select{flex:1}
 }
+
+/* ============================================================
+   PORTAL-WIDE TYPOGRAPHY SYSTEM — v14
+   One consistent baseline across every authenticated C/TPA page.
+   The header A-/Default/A+ control scales --portal-font-root only.
+   ============================================================ */
+:root{
+  --type-xs:.56rem;
+  --type-sm:.62rem;
+  --type-base:.68rem;
+  --type-md:.76rem;
+  --type-lg:.88rem;
+  --type-xl:1.28rem;
+}
+body[data-portal-page]{font-size:var(--type-base);line-height:1.45}
+body[data-portal-page] button,
+body[data-portal-page] input,
+body[data-portal-page] select,
+body[data-portal-page] textarea{font-size:var(--type-base)}
+
+/* Shared shell */
+body[data-portal-page] .nav-title{font-size:var(--type-xs)!important}
+body[data-portal-page] .nav a{font-size:var(--type-base)!important}
+body[data-portal-page] .crumb{font-size:var(--type-sm)!important}
+body[data-portal-page] .pill{font-size:var(--type-xs)!important}
+body[data-portal-page] .signout,
+body[data-portal-page] .top-support{font-size:var(--type-sm)!important}
+body[data-portal-page] .portal-clock-date{font-size:var(--type-sm)!important}
+body[data-portal-page] .portal-clock-time{font-size:var(--type-md)!important}
+body[data-portal-page] .font-sizer button{font-size:var(--type-sm)!important}
+body[data-portal-page] .font-sizer .font-reset{font-size:var(--type-xs)!important}
+
+/* Page hero */
+body[data-portal-page] .hero-kicker{font-size:var(--type-xs)!important}
+body[data-portal-page] .hero h1{font-size:var(--type-xl)!important;line-height:1.18!important;margin:5px 0!important}
+body[data-portal-page] .hero p{font-size:var(--type-base)!important;line-height:1.5!important}
+
+/* Buttons and badges */
+body[data-portal-page] .btn,
+body[data-portal-page] .btn.compact,
+body[data-portal-page] .mini-btn{font-size:var(--type-sm)!important}
+body[data-portal-page] .badge{font-size:var(--type-xs)!important}
+
+/* Metric cards — identical on every page */
+body[data-portal-page] .metric{padding:12px 14px!important;min-height:0!important}
+body[data-portal-page] .metric small{font-size:var(--type-xs)!important;line-height:1.3!important}
+body[data-portal-page] .metric strong{font-size:1.02rem!important;line-height:1.18!important;margin-top:5px!important}
+body[data-portal-page] .metric span{font-size:var(--type-xs)!important;line-height:1.35!important;margin-top:3px!important}
+
+/* Panels and section headings */
+body[data-portal-page] .panel-head h2,
+body[data-portal-page] .panel-head h3,
+body[data-portal-page] .report-toolbar h2,
+body[data-portal-page] .chat-panel-head h2{font-size:var(--type-lg)!important;line-height:1.25!important}
+body[data-portal-page] .panel-head p,
+body[data-portal-page] .report-toolbar p,
+body[data-portal-page] .chat-panel-head p{font-size:var(--type-sm)!important;line-height:1.45!important}
+
+/* Cards: reports, features, services, generic cards */
+body[data-portal-page] .card strong,
+body[data-portal-page] .service h3,
+body[data-portal-page] .feature-card h3,
+body[data-portal-page] .report-type-card h3,
+body[data-portal-page] .integration-card h3,
+body[data-portal-page] .support-card h3{font-size:var(--type-md)!important;line-height:1.3!important}
+body[data-portal-page] .card span,
+body[data-portal-page] .service p,
+body[data-portal-page] .feature-card p,
+body[data-portal-page] .report-type-card p,
+body[data-portal-page] .integration-card p,
+body[data-portal-page] .support-card p{font-size:var(--type-base)!important;line-height:1.5!important}
+body[data-portal-page] .feature-code,
+body[data-portal-page] .seller,
+body[data-portal-page] .table-sub{font-size:var(--type-xs)!important}
+body[data-portal-page] .feature-card-bottom{font-size:var(--type-sm)!important}
+
+/* Tables */
+body[data-portal-page] table{font-size:var(--type-base)!important}
+body[data-portal-page] th{font-size:var(--type-xs)!important;line-height:1.25!important;padding:9px 11px!important}
+body[data-portal-page] td{font-size:var(--type-base)!important;line-height:1.4!important;padding:9px 11px!important}
+body[data-portal-page] td strong{font-size:var(--type-base)!important;line-height:1.35!important}
+body[data-portal-page] td small{font-size:var(--type-xs)!important;line-height:1.35!important}
+
+/* Forms and filters */
+body[data-portal-page] .field label,
+body[data-portal-page] .report-filter label,
+body[data-portal-page] .chat-status label,
+body[data-portal-page] .chat-reply-label,
+body[data-portal-page] .chat-new-compose .field label{font-size:var(--type-sm)!important}
+body[data-portal-page] .field input,
+body[data-portal-page] .field select,
+body[data-portal-page] .field textarea,
+body[data-portal-page] .report-filter select,
+body[data-portal-page] .billing-search input,
+body[data-portal-page] .billing-search select,
+body[data-portal-page] .chat-search input,
+body[data-portal-page] .chat-compose input,
+body[data-portal-page] .chat-compose select,
+body[data-portal-page] .chat-compose textarea,
+body[data-portal-page] .audit-control input,
+body[data-portal-page] .audit-control select{font-size:var(--type-base)!important}
+
+/* Messages / notifications */
+body[data-portal-page] .chat-thread-top strong{font-size:var(--type-base)!important}
+body[data-portal-page] .chat-thread>span:not(.chat-thread-top),
+body[data-portal-page] .chat-thread small,
+body[data-portal-page] .chat-thread time,
+body[data-portal-page] .chat-thread-meta,
+body[data-portal-page] .chat-message-meta,
+body[data-portal-page] .chat-file-row span{font-size:var(--type-xs)!important}
+body[data-portal-page] .chat-pane-head h2{font-size:var(--type-lg)!important}
+body[data-portal-page] .chat-pane-head small{font-size:var(--type-xs)!important}
+body[data-portal-page] .chat-bubble{font-size:var(--type-base)!important;line-height:1.5!important}
+body[data-portal-page] .chat-empty{font-size:var(--type-base)!important}
+
+/* Reports */
+body[data-portal-page] .report-range-note,
+body[data-portal-page] .report-breakdown-row,
+body[data-portal-page] .report-meta{font-size:var(--type-base)!important}
+body[data-portal-page] .report-breakdown h3,
+body[data-portal-page] .report-breakdown-compact h3{font-size:var(--type-sm)!important}
+
+/* Subscription page: remove its old undersized/oversized exceptions */
+body[data-portal-page="subscription"] .subscription-toolbar strong{font-size:var(--type-md)!important}
+body[data-portal-page="subscription"] .subscription-toolbar span{font-size:var(--type-sm)!important}
+body[data-portal-page="subscription"] .subscription-toolbar .btn{font-size:var(--type-sm)!important}
+body[data-portal-page="subscription"] .card strong{font-size:var(--type-md)!important}
+body[data-portal-page="subscription"] .card span{font-size:var(--type-sm)!important}
+
+/* Audit page: keep layout-specific CSS, normalize typography */
+body[data-portal-page="audit-history"] #auditTable{font-size:var(--type-base)!important}
+body[data-portal-page="audit-history"] #auditTable th{font-size:var(--type-xs)!important}
+body[data-portal-page="audit-history"] #auditTable td{font-size:var(--type-base)!important}
+body[data-portal-page="audit-history"] #auditTable td strong{font-size:var(--type-base)!important}
+body[data-portal-page="audit-history"] #auditTable td small{font-size:var(--type-xs)!important}
+body[data-portal-page="audit-history"] #auditTable .audit-actions .mini-btn{font-size:var(--type-xs)!important}
+
+/* Add Features page: same typography as every other card page */
+body[data-portal-page="order-services"] .feature-section .panel-head h2{font-size:var(--type-lg)!important}
+body[data-portal-page="order-services"] .feature-section .panel-head p{font-size:var(--type-sm)!important}
+body[data-portal-page="order-services"] .feature-card h3{font-size:var(--type-md)!important}
+body[data-portal-page="order-services"] .feature-card p{font-size:var(--type-base)!important}
+body[data-portal-page="order-services"] .feature-code{font-size:var(--type-xs)!important}
+body[data-portal-page="order-services"] .feature-card-bottom{font-size:var(--type-sm)!important}
+
+/* Empty/loading/help text */
+body[data-portal-page] .empty,
+body[data-portal-page] .loading-msg,
+body[data-portal-page] .notice,
+body[data-portal-page] .error{font-size:var(--type-base)!important}
+
+/* Mobile keeps the same hierarchy; only layout changes */
+@media(max-width:700px){
+  body[data-portal-page] .hero h1{font-size:1.16rem!important}
+  body[data-portal-page] .metric strong{font-size:.96rem!important}
+}
