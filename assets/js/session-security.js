@@ -3,7 +3,7 @@ const P=location.pathname.split('/').pop()?.toLowerCase()||'index.html';
 const PUBLIC=new Set(['login.html','auth-handoff.html','404.html','forgot-password.html','reset-password.html','index.html']);
 if(PUBLIC.has(P)){document.documentElement.classList.remove('s4u-auth-pending');return}
 const C=window.PORTAL_CONFIG,W=window.S4UCTPAWorkspace,sb=window.S4UGetSupabaseClient?.();
-const IDLE=10*60*1000,WARN=60*1000,KEY_LAST='s4u_ctpa_dot_idle_last',KEY_CTX='s4u_ctpa_dot_verified_ctx_v2',CTX_TTL=5*60*1000;let last=Date.now(),warnOpen=false,timer=null,countTimer=null,activityBound=false;
+const IDLE=10*60*1000,WARN=60*1000,KEY_LAST='s4u_ctpa_dot_idle_last',KEY_CTX='s4u_ctpa_dot_verified_ctx_v2',CTX_TTL=30*60*1000;let last=Date.now(),warnOpen=false,timer=null,countTimer=null,activityBound=false;
 let readyResolve,readyReject;window.S4UCTPAAuthReady=new Promise((resolve,reject)=>{readyResolve=resolve;readyReject=reject});
 function safeLast(){const n=Number(localStorage.getItem(KEY_LAST)||0);return Number.isFinite(n)&&n>0?n:last}
 function setLast(){last=Date.now();try{localStorage.setItem(KEY_LAST,String(last))}catch{};hideWarn();schedule()}

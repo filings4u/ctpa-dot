@@ -27,4 +27,5 @@ window.PORTAL_CONFIG=Object.freeze({
  };
  window.S4UCTPAPayload=function(body={}){const w=readWorkspace();return {...body,ctpa_id:body.ctpa_id||w?.ctpa_id||undefined,subscription_id:body.subscription_id||w?.subscription_id||undefined,membership_id:body.membership_id||w?.membership_id||undefined}};
  clearLegacyWorkspace();
+ if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}),{once:true})}
 })();

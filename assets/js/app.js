@@ -86,7 +86,7 @@ function shell(ctx){
     if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString(),opened_from:'top_support'});
     if(current!=='support')location.href='/support.html';
   };
-  $('#logout').onclick=async()=>{try{if(C.kind==='ctpa')await invoke('workforce-ctpa-admin',{action:'log_portal_event',event_type:'auth.logout',summary:'User signed out',resource_type:'user',resource_id:window.portalCtx?.user?.id||null,user_agent:navigator.userAgent})}catch(_){}W.clear();await sb.auth.signOut({scope:'local'});location.replace('/login.html')};
+  $('#logout').onclick=async()=>{try{if(C.kind==='ctpa')await invoke('workforce-ctpa-admin',{action:'log_portal_event',event_type:'auth.logout',summary:'User signed out',resource_type:'user',resource_id:window.portalCtx?.user?.id||null,user_agent:navigator.userAgent})}catch(_){}W.clear();await clearPageCache();await sb.auth.signOut({scope:'local'});location.replace('/login.html')};
 }
 function metric(label,value,note=''){return `<div class="metric"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(note)}</span></div>`}
 function read(o,keys){for(const k of keys){let v=o;for(const p of k.split('.'))v=v?.[p];if(v!==undefined&&v!==null&&v!=='')return v}return'—'}
@@ -411,6 +411,16 @@ function wireManagementActions(p,d,ctx){
   });
 }
 
+const PAGE_CACHE_NAME='s4u-ctpa-page-data-v4';
+const PAGE_CACHE_MAX_AGE=15*60*1000;
+function cacheIdentity(p,search=location.search){const w=workspace()||{};const q=String(search||'');return `${String(w.user_id||'u')}|${String(w.ctpa_id||'c')}|${String(w.subscription_id||'s')}|${norm(p)}|${q}`}
+function cacheUrl(p,search=location.search){const id=cacheIdentity(p,search);let h=2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619)}return `${location.origin}/__s4u_cache__/page/${(h>>>0).toString(36)}`}
+async function readPageCache(p,search=location.search){try{if(!('caches'in window))return null;const c=await caches.open(PAGE_CACHE_NAME),r=await c.match(cacheUrl(p,search));if(!r)return null;const x=await r.json();if(!x||Date.now()-Number(x.saved_at||0)>PAGE_CACHE_MAX_AGE)return null;return x.data}catch{return null}}
+async function writePageCache(p,data,search=location.search){try{if(!('caches'in window)||data===undefined)return;const c=await caches.open(PAGE_CACHE_NAME);await c.put(cacheUrl(p,search),new Response(JSON.stringify({saved_at:Date.now(),data}),{headers:{'Content-Type':'application/json'}}))}catch{}}
+async function clearPageCache(){try{if('caches'in window)await caches.delete(PAGE_CACHE_NAME)}catch{}}
+const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','users_roles','audit_history','support'];
+let prefetchStarted=false;
+function schedulePortalPrefetch(){if(prefetchStarted||C.kind!=='ctpa')return;prefetchStarted=true;const run=async()=>{for(const p of PREFETCH_PAGES){if(p===page())continue;try{if(await readPageCache(p,''))continue;const d=await loadPageData(p);await writePageCache(p,d,'')}catch{}await new Promise(r=>setTimeout(r,40))}};if('requestIdleCallback'in window)requestIdleCallback(()=>run(),{timeout:1200});else setTimeout(run,250)}
 async function loadPageData(p){
   let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
@@ -556,12 +566,18 @@ function startRealtime(ctx){
 }
 async function init(){
   try{
-    const dataPromise=loadPageData(page());
+    const p=page();
+    const cachedPromise=readPageCache(p);
+    const freshPromise=loadPageData(p).then(async d=>{await writePageCache(p,d);return d});
     const ctx=await access();if(!ctx?.has_access)throw new Error(ctx?.reason||'Portal access denied.');
     window.portalCtx=ctx;shell(ctx);
-    const d=await dataPromise;await render(ctx,d);startRealtime(ctx)
+    const cached=await cachedPromise;
+    if(cached!==null)await render(ctx,cached);
+    const d=await freshPromise;
+    await render(ctx,d);
+    startRealtime(ctx);schedulePortalPrefetch()
   }
-  catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('/login.html');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
+  catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();await clearPageCache();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('/login.html');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
 }
 window.Portal={invoke,sb,refresh:async()=>{if(!window.portalCtx)return;await render(window.portalCtx)},liveRefresh:scheduleLiveRender};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
