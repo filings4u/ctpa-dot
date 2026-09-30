@@ -554,6 +554,6 @@ async function init(){
   try{const ctx=await access();if(!ctx?.has_access)throw new Error(ctx?.reason||'Portal access denied.');window.portalCtx=ctx;shell(ctx);await render(ctx);startRealtime(ctx)}
   catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('/login.html');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
 }
-window.Portal={invoke,sb,refresh:async()=>Promise.resolve(),liveRefresh:scheduleLiveRender};
+window.Portal={invoke,sb,refresh:async()=>{if(!window.portalCtx)return;await render(window.portalCtx)},liveRefresh:scheduleLiveRender};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
