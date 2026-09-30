@@ -579,3 +579,34 @@ input,select,textarea,button{max-width:100%}
   .chat-status-row select{flex:1}
   .chat-message{max-width:94%}
 }
+
+
+/* Shared portal clock + Add Features typography — 2026-09-30 */
+.portal-clock{display:grid;gap:1px;min-width:128px;padding-right:10px;border-right:1px solid var(--line);text-align:right;line-height:1.15;white-space:nowrap}
+.portal-clock-date{font-size:.57rem;color:#72859a;font-weight:700;letter-spacing:.01em}
+.portal-clock-time{font-size:.68rem;color:var(--navy);font-weight:850;font-variant-numeric:tabular-nums}
+
+body[data-portal-page="order-services"] .hero{padding-top:20px;padding-bottom:20px}
+body[data-portal-page="order-services"] .hero h1{font-size:1.45rem;margin:5px 0 5px}
+body[data-portal-page="order-services"] .hero p{font-size:.70rem;line-height:1.45}
+body[data-portal-page="order-services"] .metrics{gap:10px}
+body[data-portal-page="order-services"] .metric{padding:12px 14px}
+body[data-portal-page="order-services"] .metric small{font-size:.56rem}
+body[data-portal-page="order-services"] .metric strong{font-size:1.18rem;margin-top:5px}
+body[data-portal-page="order-services"] .metric span{font-size:.55rem;margin-top:3px}
+body[data-portal-page="order-services"] .feature-section{margin:14px 0}
+body[data-portal-page="order-services"] .feature-section .panel-head{padding:10px 14px}
+body[data-portal-page="order-services"] .feature-section .panel-head h2{font-size:.75rem}
+body[data-portal-page="order-services"] .feature-section .panel-head p{font-size:.55rem}
+body[data-portal-page="order-services"] .feature-grid{gap:10px}
+body[data-portal-page="order-services"] .feature-card{border-radius:12px;padding:14px;min-height:180px}
+body[data-portal-page="order-services"] .feature-card-top{gap:10px}
+body[data-portal-page="order-services"] .feature-card h3{font-size:.88rem;line-height:1.25;margin:0 0 3px}
+body[data-portal-page="order-services"] .feature-code{font-size:.55rem}
+body[data-portal-page="order-services"] .feature-card p{font-size:.69rem;line-height:1.45;margin:10px 0 12px}
+body[data-portal-page="order-services"] .feature-card-bottom{padding-top:10px;gap:8px;font-size:.61rem}
+body[data-portal-page="order-services"] .feature-card .pill{font-size:.54rem;padding:4px 7px}
+body[data-portal-page="order-services"] .feature-card .btn{font-size:.58rem;padding:8px 10px}
+
+@media(max-width:1120px){.portal-clock{min-width:112px}.portal-clock-date{display:none}}
+@media(max-width:900px){.portal-clock{display:none}}
