@@ -209,7 +209,7 @@ function bindUtilityPage(p,d,ctx){
 }
 
 async function ctpaData(p){
-  if(p==='employers'||p==='employer-form')return invoke('workforce-ctpa-employers',{action:'workspace'});
+  if(p==='employers'||p==='employer_form')return invoke('workforce-ctpa-employers',{action:'workspace'});
   if(p==='owner_operators')return invoke('workforce-ctpa-owner-operators',{action:'workspace'});
   if(p==='people'||p==='people_form'||p==='people_company'||p==='programs'||p==='program_form'||p==='program_detail')return invoke('workforce-ctpa-employees-programs',{action:'workspace'});
   if(p==='pools'||p==='pool_detail'||p==='pool_form')return invoke('workforce-ctpa-pools',{action:'workspace'});
@@ -437,7 +437,7 @@ async function render(ctx){
   else if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling){setSubtitle('Create, manage, download, and send invoices to your client Employers.');html=window.CtpaBilling.render(d,ctx);}
   else if(C.kind==='ctpa'&&['employer_invoice_form','employer_invoice_view','employer_invoice_send','employer_invoice_delete','employer_remittance'].includes(p)&&window.CtpaInvoicePages){setSubtitle('Manage Employer and Owner-Operator invoices and remittance information.');html=window.CtpaInvoicePages.render(p,d,ctx);}
   else if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers){setSubtitle('Manage every client Employer, its DOT company record, and who can access its Employer Portal.');html=window.CtpaEmployers.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='employer-form'&&window.CtpaEmployerForm){setSubtitle('Create or edit an Employer record.');html=window.CtpaEmployerForm.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='employer_form'&&window.CtpaEmployerForm){setSubtitle('Create or edit an Employer record.');html=window.CtpaEmployerForm.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='people'&&window.CtpaPeople){setSubtitle('View every employee, driver, staff member, and contractor across managed Employers.');html=window.CtpaPeople.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='people_form'&&window.CtpaPeopleForm){setSubtitle('Add a person to a managed Employer.');html=window.CtpaPeopleForm.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='people_company'&&window.CtpaPeopleCompany){setSubtitle('View employees, drivers, staff, and contractors for this Employer.');html=window.CtpaPeopleCompany.render(d,ctx);}
@@ -504,7 +504,7 @@ async function render(ctx){
   if(C.kind==='ctpa'&&p==='employer_billing'&&window.CtpaBilling)window.CtpaBilling.bind(d,ctx);
   if(C.kind==='ctpa'&&['employer_invoice_form','employer_invoice_view','employer_invoice_send','employer_invoice_delete','employer_remittance'].includes(p)&&window.CtpaInvoicePages)window.CtpaInvoicePages.bind(p,d,ctx);
   if(C.kind==='ctpa'&&p==='employers'&&window.CtpaEmployers)window.CtpaEmployers.bind(d,ctx);
-  if(C.kind==='ctpa'&&p==='employer-form'&&window.CtpaEmployerForm)window.CtpaEmployerForm.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='employer_form'&&window.CtpaEmployerForm)window.CtpaEmployerForm.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='people'&&window.CtpaPeople)window.CtpaPeople.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='people_form'&&window.CtpaPeopleForm)window.CtpaPeopleForm.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='people_company'&&window.CtpaPeopleCompany)window.CtpaPeopleCompany.bind(d,ctx);
