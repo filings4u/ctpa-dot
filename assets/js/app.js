@@ -51,7 +51,7 @@ function buildNavigation(ctx={}){
     ['pools','4. Pools','◉','consortium_pools'],['selections','5. Selections','↻','random_selections'],['testing','6. Testing','◆','testing_orders'],['results','7. Results','✓','results_summary'],
 ['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Messages','✉','notifications','enterprise'],
     ['create-order','Create Order','＋',null],['price-list','Testing Price List','$',null],['order-services','Add Features','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
-    ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit & Log History','◷','audit_history'],['support','Support','? ',null]
+    ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['lab-accounts','Lab Accounts','⌬',null],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit & Log History','◷','audit_history'],['schedule-demo','Schedule Demo','◫',null],['attend-demo','Attend Demo','▶',null],['support','Support','? ',null]
   ];
   const enterprise=String(ctx?.plan?.code||ctx?.subscription?.plan_code||'').toLowerCase()==='dot_ctpa_enterprise';
   return items.filter(x=>(!x[3]||e[x[3]]===true)&&(!x[4]||enterprise)).map(x=>({id:x[0],label:x[1],icon:x[2],href:`/${x[0]}.html`}));
@@ -77,6 +77,7 @@ function shell(ctx){
   if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString()});
   document.body.className='';
   document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="images/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(planLabel)}</div>${links}</nav><div class="side-foot"><div style="font-size:0.5625rem;color:#9fb3c7">Portal</div><div style="font-size:0.6875rem;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="mobileNav"><span class="menu-bars" aria-hidden="true"><span></span><span></span><span></span></span></button><span class="crumb">${esc(planLabel)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><div class="portal-clock" aria-label="Current date and time"><span id="portalClockDate" class="portal-clock-date"></span><strong id="portalClockTime" class="portal-clock-time"></strong></div><div class="font-sizer" role="group" aria-label="Page font size"><button type="button" id="fontDown" aria-label="Decrease font size" title="Decrease font size">A−</button><button type="button" class="font-reset" id="fontSizeValue" aria-label="Reset font size to default" title="Reset font size">${portalFontSize===FONT_DEFAULT?'Default':portalFontSize}</button><button type="button" id="fontUp" aria-label="Increase font size" title="Increase font size">A+</button></div><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="top-support${current==='support'?' active':''}" id="supportShortcut" type="button"${current==='support'?' aria-current="page"':''}>Support</button><button class="signout" id="logout">Sign out</button></div></header><section class="mobile-nav" id="mobileNav" aria-hidden="true" aria-label="Portal navigation"><div class="mobile-nav-inner"><div class="mobile-nav-head"><div><span>Portal navigation</span><strong>${esc(planLabel)}</strong></div><span class="mobile-nav-current">${esc(cfgPage(current).label)}</span></div><nav class="mobile-nav-links">${links}</nav><div class="mobile-nav-foot"><span>${esc(C.domain)}</span><small>Select a page to close this menu.</small></div></div></section><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(planLabel)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">Loading portal workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"><div class="panel"><div class="loading-msg">Loading…</div></div></section></div></main></div>`;
+  requestAnimationFrame(()=>{const nav=document.querySelector('.side .nav'),active=nav?.querySelector('a.active');if(nav&&active){const top=active.offsetTop-nav.clientHeight/2+active.clientHeight/2;nav.scrollTop=Math.max(0,top)}});
   const menuBtn=$('#menu'),mobileNav=$('#mobileNav');
   const setMobileNav=open=>{
     const isMobile=window.matchMedia('(max-width: 820px)').matches;
@@ -152,6 +153,8 @@ async function utilityData(p){
     if(p==='integrations')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'integrations'}).catch(e=>({integrations:[],not_enabled:true,message:e.message||String(e),access_mode:'view_only'}));
     if(p==='audit-history'){const eventId=new URLSearchParams(location.search).get('event_id');return eventId?invoke('workforce-ctpa-admin',{action:'audit_detail',event_id:eventId}):invoke('workforce-ctpa-admin',{action:'workspace',scope:'audit'});}
     if(p==='locations')return invoke('workforce-ctpa-locations',{action:'workspace'});
+  if(p==='lab_accounts')return invoke('workforce-ctpa-lab-accounts',{action:'workspace'});
+  if(p==='schedule_demo'||p==='attend_demo')return invoke('workforce-ctpa-demos',{action:'workspace'});
     if(p==='users-roles')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'staff'}).then(x=>({...x,access_mode:x.can_manage?'manage':'view_only'})).catch(e=>({members:[],roles:[],not_enabled:true,message:e.message||String(e),access_mode:'view_only'}));
   }
   if(p==='integrations')return invoke('workforce-employer-advanced',{action:'integrations'}).catch(e=>({integrations:[],not_enabled:true,message:e.message||String(e),access_mode:'view_only'}));
@@ -250,6 +253,8 @@ async function ctpaData(p){
   if(p==='integration_connect'){const id=new URLSearchParams(location.search).get('integration_id')||'';return invoke('workforce-ctpa-integrations',{action:'detail',integration_id:id});}
   if(p==='integration_workspace'){const id=new URLSearchParams(location.search).get('id')||'';return invoke('workforce-ctpa-integrations',{action:'detail',connection_id:id});}
   if(p==='locations')return invoke('workforce-ctpa-locations',{action:'workspace'});
+  if(p==='lab_accounts')return invoke('workforce-ctpa-lab-accounts',{action:'workspace'});
+  if(p==='schedule_demo'||p==='attend_demo')return invoke('workforce-ctpa-demos',{action:'workspace'});
   if(p==='location_form'){const q=new URLSearchParams(location.search),id=q.get('id')||'';return id?invoke('workforce-ctpa-locations',{action:'get_location',location_id:id,target_type:q.get('target_type')||'employer'}):invoke('workforce-ctpa-locations',{action:'workspace'});}
   if(p==='users_roles')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'staff'});
   if(p==='staff_form')return invoke('workforce-ctpa-admin',{action:'workspace',scope:'staff'});
@@ -439,7 +444,7 @@ function cacheUrl(p,search=location.search){const id=cacheIdentity(p,search);let
 async function readPageCache(p,search=location.search){try{if(!('caches'in window))return null;const c=await caches.open(PAGE_CACHE_NAME),r=await c.match(cacheUrl(p,search));if(!r)return null;const x=await r.json();if(!x||Date.now()-Number(x.saved_at||0)>PAGE_CACHE_MAX_AGE)return null;return x.data}catch{return null}}
 async function writePageCache(p,data,search=location.search){try{if(!('caches'in window)||data===undefined)return;const c=await caches.open(PAGE_CACHE_NAME);await c.put(cacheUrl(p,search),new Response(JSON.stringify({saved_at:Date.now(),data}),{headers:{'Content-Type':'application/json'}}))}catch{}}
 async function clearPageCache(){try{if('caches'in window)await caches.delete(PAGE_CACHE_NAME)}catch{}}
-const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','create_order','price_list','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','users_roles','audit_history','support'];
+const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','create_order','price_list','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','lab_accounts','users_roles','audit_history','schedule_demo','attend_demo','support'];
 let prefetchStarted=false;
 function schedulePortalPrefetch(){if(prefetchStarted||C.kind!=='ctpa')return;prefetchStarted=true;const run=async()=>{for(const p of PREFETCH_PAGES){if(p===page())continue;try{if(await readPageCache(p,''))continue;const d=await loadPageData(p);await writePageCache(p,d,'')}catch{}await new Promise(r=>setTimeout(r,40))}};if('requestIdleCallback'in window)requestIdleCallback(()=>run(),{timeout:1200});else setTimeout(run,250)}
 async function loadPageData(p){
@@ -459,6 +464,9 @@ async function render(ctx,prefetched){
   else if(C.kind==='ctpa'&&p==='integration_connect'&&window.CtpaIntegrations){setSubtitle('Connect this integration using your business credentials or API access.');html=window.CtpaIntegrations.renderConnect(d,ctx);}
   else if(C.kind==='ctpa'&&p==='integration_workspace'&&window.CtpaIntegrations){setSubtitle('Manage, test, and use this connected integration.');html=window.CtpaIntegrations.renderWorkspace(d,ctx);}
   else if(C.kind==='ctpa'&&p==='location_form'&&window.CtpaLocations){setSubtitle('Add or edit a location for your C/TPA, an Employer, or an Owner-Operator.');html=window.CtpaLocations.renderForm(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='lab_accounts'&&window.CtpaLabAccounts){setSubtitle('View the laboratory accounts and account numbers configured for your C/TPA.');html=window.CtpaLabAccounts.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='schedule_demo'&&window.CtpaDemos){setSubtitle('Choose a date and time for a live screenings4u DOT platform demonstration.');html=window.CtpaDemos.renderSchedule(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='attend_demo'&&window.CtpaDemos){setSubtitle('View your confirmed demonstration and join it from your portal on the scheduled day.');html=window.CtpaDemos.renderAttend(d,ctx);}
   else if(C.kind==='ctpa'&&p==='staff_form'&&window.CtpaStaff){setSubtitle('Add an internal C/TPA staff member and assign their roles.');html=window.CtpaStaff.form(d,ctx);}
   else if(C.kind==='ctpa'&&p==='staff_view'&&window.CtpaStaff){setSubtitle('View and manage this internal C/TPA staff member and their assigned roles.');html=window.CtpaStaff.view(d,ctx);}
   else if(C.kind==='ctpa'&&p==='staff_invite'&&window.CtpaStaff){setSubtitle('Send this staff member their portal invitation and password-creation link.');html=window.CtpaStaff.invite(d,ctx);}
@@ -534,6 +542,8 @@ async function render(ctx,prefetched){
   if(isUtilityPage(p)&&!(C.kind==='ctpa'&&p==='integrations'&&window.CtpaIntegrations))bindUtilityPage(p,d,ctx);
   if(C.kind==='ctpa'&&['integrations','integration_connect','integration_workspace'].includes(p)&&window.CtpaIntegrations)window.CtpaIntegrations.bind(p,d,ctx);
   if(C.kind==='ctpa'&&p==='location_form'&&window.CtpaLocations)window.CtpaLocations.bindForm(d,ctx);
+  if(C.kind==='ctpa'&&p==='schedule_demo'&&window.CtpaDemos)window.CtpaDemos.bindSchedule(d,ctx);
+  if(C.kind==='ctpa'&&p==='attend_demo'&&window.CtpaDemos)window.CtpaDemos.bindAttend(d,ctx);
   if(C.kind==='ctpa'&&['staff_form','staff_view','staff_invite','staff_delete'].includes(p)&&window.CtpaStaff)window.CtpaStaff.bind(p,d,ctx);
   if(p==='order_history'&&window.AccountOrderHistory)window.AccountOrderHistory.bind(d,ctx);
   if(p==='subscription'&&window.AccountSubscription)window.AccountSubscription.bind(d,ctx);
