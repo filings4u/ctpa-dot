@@ -41,7 +41,7 @@ function buildNavigation(ctx={}){
     ['dashboard','Dashboard','⌂',null],
     ['employers','1. Employers','▣','employer_management'],['people','2. People','●','employee_management'],['programs','3. Programs','◎','programs'],
     ['pools','4. Pools','◉','consortium_pools'],['selections','5. Selections','↻','random_selections'],['testing','6. Testing','◆','testing_orders'],['results','7. Results','✓','results_summary'],
-['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Notifications','✉','notifications','enterprise'],
+['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Messages','✉','notifications','enterprise'],
     ['order-services','Add Features','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
     ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit & Log History','◷','audit_history'],['support','Support','? ',null]
   ];
@@ -481,7 +481,7 @@ async function render(ctx,prefetched){
   else if(C.kind==='ctpa'&&p==='report_generate'&&window.CtpaReportGenerate){setSubtitle('Generate a DOT compliance report from the live C/TPA records.');html=window.CtpaReportGenerate.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='report_view'&&window.CtpaReportView){setSubtitle('View this generated report.');html=window.CtpaReportView.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='report_archive'&&window.CtpaReportArchive){setSubtitle('Archive this generated report.');html=window.CtpaReportArchive.render(d,ctx);}
-  else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaLiveChat){setSubtitle('Live support conversations with your managed Employers and Owner-Operators.');html=window.CtpaLiveChat.render(d,ctx,'employer');}
+  else if(C.kind==='ctpa'&&p==='notifications'&&window.CtpaLiveChat){setSubtitle('Direct conversations with your managed Employers and Owner-Operators.');html=window.CtpaLiveChat.render(d,ctx,'employer');}
   else if(C.kind==='ctpa'&&p==='support'&&window.CtpaSupport){setSubtitle('Get help, create support requests, track ticket status, and find answers for common portal issues.');html=window.CtpaSupport.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='pool_form'&&window.CtpaPoolForm){setSubtitle('Configure the consortium Pool created from its Program.');html=window.CtpaPoolForm.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='pool_detail'&&window.CtpaPoolDetail){setSubtitle('View and manage people in this random pool.');html=window.CtpaPoolDetail.render(d,ctx);}
