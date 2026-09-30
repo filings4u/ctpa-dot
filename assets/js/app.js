@@ -437,12 +437,13 @@ function wireManagementActions(p,d,ctx){
   });
 }
 
-const PAGE_CACHE_NAME='s4u-ctpa-page-data-v4';
+const PAGE_CACHE_NAME='s4u-ctpa-page-data-v5';
 const PAGE_CACHE_MAX_AGE=15*60*1000;
 function cacheIdentity(p,search=location.search){const w=workspace()||{};const q=String(search||'');return `${String(w.user_id||'u')}|${String(w.ctpa_id||'c')}|${String(w.subscription_id||'s')}|${norm(p)}|${q}`}
 function cacheUrl(p,search=location.search){const id=cacheIdentity(p,search);let h=2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619)}return `${location.origin}/__s4u_cache__/page/${(h>>>0).toString(36)}`}
-async function readPageCache(p,search=location.search){try{if(!('caches'in window))return null;const c=await caches.open(PAGE_CACHE_NAME),r=await c.match(cacheUrl(p,search));if(!r)return null;const x=await r.json();if(!x||Date.now()-Number(x.saved_at||0)>PAGE_CACHE_MAX_AGE)return null;return x.data}catch{return null}}
-async function writePageCache(p,data,search=location.search){try{if(!('caches'in window)||data===undefined)return;const c=await caches.open(PAGE_CACHE_NAME);await c.put(cacheUrl(p,search),new Response(JSON.stringify({saved_at:Date.now(),data}),{headers:{'Content-Type':'application/json'}}))}catch{}}
+function isDynamicPage(p){return ['lab_accounts','schedule_demo','attend_demo','notifications','billing','employer_billing'].includes(norm(p))}
+async function readPageCache(p,search=location.search){try{if(isDynamicPage(p)||!('caches'in window))return null;const c=await caches.open(PAGE_CACHE_NAME),r=await c.match(cacheUrl(p,search));if(!r)return null;const x=await r.json();if(!x||Date.now()-Number(x.saved_at||0)>PAGE_CACHE_MAX_AGE)return null;return x.data}catch{return null}}
+async function writePageCache(p,data,search=location.search){try{if(isDynamicPage(p)||!('caches'in window)||data===undefined)return;const c=await caches.open(PAGE_CACHE_NAME);await c.put(cacheUrl(p,search),new Response(JSON.stringify({saved_at:Date.now(),data}),{headers:{'Content-Type':'application/json'}}))}catch{}}
 async function clearPageCache(){try{if('caches'in window)await caches.delete(PAGE_CACHE_NAME)}catch{}}
 const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','create_order','price_list','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','lab_accounts','users_roles','audit_history','schedule_demo','attend_demo','support'];
 let prefetchStarted=false;
