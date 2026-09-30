@@ -411,11 +411,15 @@ function wireManagementActions(p,d,ctx){
   });
 }
 
-async function render(ctx){
-  $('#actions').innerHTML='';const p=page();
+async function loadPageData(p){
   let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
   if(isUtilityPage(p)&&!(C.kind==='ctpa'&&p==='integrations'&&window.CtpaIntegrations))d=await utilityData(p);
+  return d;
+}
+async function render(ctx,prefetched){
+  $('#actions').innerHTML='';const p=page();
+  const d=prefetched!==undefined?prefetched:await loadPageData(p);
   if(C.kind==='self')setSubtitle('View your own records and complete only the actions assigned to you.');
   else if(C.kind==='agency')setSubtitle(`${C.agency} company management workspace. Changes apply only to your company.`);
   else setSubtitle(p==='dashboard'?'Company-wide snapshot of employers, testing, randoms, compliance, billing, and recent activity.':'Manage your company records, people, programs, testing and compliance.');
@@ -551,7 +555,12 @@ function startRealtime(ctx){
   }catch(e){console.warn('Realtime unavailable',e)}
 }
 async function init(){
-  try{const ctx=await access();if(!ctx?.has_access)throw new Error(ctx?.reason||'Portal access denied.');window.portalCtx=ctx;shell(ctx);await render(ctx);startRealtime(ctx)}
+  try{
+    const dataPromise=loadPageData(page());
+    const ctx=await access();if(!ctx?.has_access)throw new Error(ctx?.reason||'Portal access denied.');
+    window.portalCtx=ctx;shell(ctx);
+    const d=await dataPromise;await render(ctx,d);startRealtime(ctx)
+  }
   catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('/login.html');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="/images/logo-dot.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
 }
 window.Portal={invoke,sb,refresh:async()=>{if(!window.portalCtx)return;await render(window.portalCtx)},liveRefresh:scheduleLiveRender};
