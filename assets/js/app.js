@@ -50,7 +50,7 @@ function buildNavigation(ctx={}){
     ['employers','1. Employers','▣','employer_management'],['people','2. People','●','employee_management'],['programs','3. Programs','◎','programs'],
     ['pools','4. Pools','◉','consortium_pools'],['selections','5. Selections','↻','random_selections'],['testing','6. Testing','◆','testing_orders'],['results','7. Results','✓','results_summary'],
 ['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Messages','✉','notifications','enterprise'],
-    ['create-order','Create Order','＋',null],['order-services','Add Features','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
+    ['create-order','Create Order','＋',null],['price-list','Testing Price List','$',null],['order-services','Add Features','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
     ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit & Log History','◷','audit_history'],['support','Support','? ',null]
   ];
   const enterprise=String(ctx?.plan?.code||ctx?.subscription?.plan_code||'').toLowerCase()==='dot_ctpa_enterprise';
@@ -256,6 +256,7 @@ async function ctpaData(p){
   if(['staff_view','staff_invite','staff_delete'].includes(p)){const id=new URLSearchParams(location.search).get('id')||'';return invoke('workforce-ctpa-admin',{action:'get_staff',membership_id:id});}
   if(p==='support'){const id=new URLSearchParams(location.search).get('ticket_id')||'';return id?invoke('workforce-support',{action:'thread',ticket_id:id}):invoke('workforce-support',{action:'workspace'});}
   if(p==='create_order'&&window.CtpaStoreOrders)return window.CtpaStoreOrders.load();
+  if(p==='price_list'&&window.CtpaPriceList)return window.CtpaPriceList.load();
   if(p==='order_services')return invoke('workforce-ctpa-features',{action:'workspace'});
   const scope={dashboard:'dashboard',employers:'all',selections:'selections',results:'results',reports:'reports'}[p]||'dashboard';
   return invoke('workforce-ctpa-portal',{action:'workspace',scope});
@@ -438,7 +439,7 @@ function cacheUrl(p,search=location.search){const id=cacheIdentity(p,search);let
 async function readPageCache(p,search=location.search){try{if(!('caches'in window))return null;const c=await caches.open(PAGE_CACHE_NAME),r=await c.match(cacheUrl(p,search));if(!r)return null;const x=await r.json();if(!x||Date.now()-Number(x.saved_at||0)>PAGE_CACHE_MAX_AGE)return null;return x.data}catch{return null}}
 async function writePageCache(p,data,search=location.search){try{if(!('caches'in window)||data===undefined)return;const c=await caches.open(PAGE_CACHE_NAME);await c.put(cacheUrl(p,search),new Response(JSON.stringify({saved_at:Date.now(),data}),{headers:{'Content-Type':'application/json'}}))}catch{}}
 async function clearPageCache(){try{if('caches'in window)await caches.delete(PAGE_CACHE_NAME)}catch{}}
-const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','create_order','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','users_roles','audit_history','support'];
+const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','create_order','price_list','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','users_roles','audit_history','support'];
 let prefetchStarted=false;
 function schedulePortalPrefetch(){if(prefetchStarted||C.kind!=='ctpa')return;prefetchStarted=true;const run=async()=>{for(const p of PREFETCH_PAGES){if(p===page())continue;try{if(await readPageCache(p,''))continue;const d=await loadPageData(p);await writePageCache(p,d,'')}catch{}await new Promise(r=>setTimeout(r,40))}};if('requestIdleCallback'in window)requestIdleCallback(()=>run(),{timeout:1200});else setTimeout(run,250)}
 async function loadPageData(p){
@@ -465,6 +466,7 @@ async function render(ctx,prefetched){
   else if(isUtilityPage(p))html=renderUtilityPage(p,d);
   else if(p==='dashboard')html=dashboard(ctx,d);
   else if(C.kind==='ctpa'&&p==='create_order'&&window.CtpaStoreOrders){setSubtitle('Create a screenings4u order for supplies and approved testing products.');html=window.CtpaStoreOrders.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='price_list'&&window.CtpaPriceList){setSubtitle('View the testing prices assigned to your C/TPA account.');html=window.CtpaPriceList.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='order_services'&&window.CtpaFeatures){setSubtitle('Review available account features and submit requests for screenings4u approval.');html=window.CtpaFeatures.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='order_history'&&window.AccountOrderHistory){setSubtitle('View and download receipts for your screenings4u DOT C/TPA account.');html=window.AccountOrderHistory.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='subscription'&&window.AccountSubscription){setSubtitle('Review your current screenings4u DOT C/TPA software subscription.');html=window.AccountSubscription.render(d,ctx);}
