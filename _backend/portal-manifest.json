@@ -1,0 +1,16 @@
+{
+  "portal_directory": "ctpa-dot",
+  "portal_code": "ctpa_dot",
+  "domain": "ctpa-dot.screenings4u.com",
+  "label": "screenings4u DOT C/TPA",
+  "kind": "ctpa",
+  "runtime_function": "ctpa-dot",
+  "runtime_routes": {"session": "/session", "actions": "/", "distribution": "/distribution"},
+  "account_type": "dot_ctpa",
+  "plan_rule": {"type": "prefix", "value": "dot_ctpa_"},
+  "validation_profile": "ctpa_management",
+  "isolated_runtime": true,
+  "shared_runtime_dependencies": [],
+  "database_note": "Business data remains centralized; C/TPA portal executable runtime is isolated in ctpa-dot.",
+  "role_model": {"type": "organization_memberships", "accepted_roles": ["ctpa_admin", "ctpa_staff"]}
+}

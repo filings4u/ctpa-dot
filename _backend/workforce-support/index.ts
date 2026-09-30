@@ -49,7 +49,7 @@ Deno.serve(async req=>{
   if(req.method!=='POST')return J({error:'Method not allowed.'},405);
   try{
     const b=await req.json().catch(()=>({})),action=String(b.action||'list');
-    const c=await ctx(req,clean(b.membership_id,100));if(!c)return J({error:'Active Workforce account access required.'},403);
+    const c=await ctx(req,clean(b.membership_id,100));if(!c)return J({error:'Active DOT portal account access required.'},403);
     if(action==='create'){
       const subject=clean(b.subject,180),message=clean(b.message||b.description,10000);if(!subject||!message)return J({error:'Subject and message are required.'},400);
       const priority=clean(b.priority||'normal',20),category=clean(b.category||'general',80);if(!['low','normal','high','urgent'].includes(priority))return J({error:'Invalid support priority.'},400);
