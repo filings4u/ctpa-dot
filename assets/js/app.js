@@ -51,7 +51,7 @@ async function invoke(name,body={}){
   const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
   const w=workspace();if(!w?.ctpa_id||!w?.subscription_id)throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409});
   const payload={...body,legacy_endpoint:name,ctpa_id:w.ctpa_id,subscription_id:w.subscription_id,membership_id:w.membership_id||undefined};
-  const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d;
+  const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot?forceFunctionRegion=ca-central-1`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d;
 }
 async function access(){if(window.S4UCTPAVerifiedContext)return window.S4UCTPAVerifiedContext;if(window.S4UCTPAAuthReady)return await window.S4UCTPAAuthReady;throw Object.assign(new Error('Authentication verification is unavailable.'),{status:500})}
 
@@ -252,7 +252,7 @@ async function employerData(p){
   return invoke('workforce-employer-management',{action:map[p]||'overview'});
 }
 async function selfData(){return invoke('workforce-employee-portal',{action:'workspace',membership_id:stored()})}
-async function serviceCatalog(){const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot`,{method:'POST',headers:{'Content-Type':'application/json','apikey':C.workforceKey,'Authorization':`Bearer ${(await getSession())?.access_token||''}`},body:JSON.stringify(window.S4UCTPAPayload({legacy_endpoint:'portal-order-catalog',action:'workspace'}))});const d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load services.');return d}
+async function serviceCatalog(){const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot?forceFunctionRegion=ca-central-1`,{method:'POST',headers:{'Content-Type':'application/json','apikey':C.workforceKey,'Authorization':`Bearer ${(await getSession())?.access_token||''}`},body:JSON.stringify(window.S4UCTPAPayload({legacy_endpoint:'portal-order-catalog',action:'workspace'}))});const d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||'Unable to load services.');return d}
 
 function dashboard(ctx,d){
   if(C.kind==='self'){

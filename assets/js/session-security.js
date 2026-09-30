@@ -26,7 +26,7 @@ async function guard(){try{
   if(!w||w.user_id!==session.user.id){W.clear();try{sessionStorage.removeItem(KEY_CTX)}catch{};location.replace('/workspace.html');return}
   const cached=readCachedContext(session,w);
   if(cached){finishAuth(cached);return}
-  const r=await fetch(C.workforceUrl+'/functions/v1/ctpa-dot/session',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':C.workforceKey},body:JSON.stringify({ctpa_id:w.ctpa_id,subscription_id:w.subscription_id,page:P.replace('.html','')})});
+  const r=await fetch(C.workforceUrl+'/functions/v1/ctpa-dot/session?forceFunctionRegion=ca-central-1',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':C.workforceKey},body:JSON.stringify({ctpa_id:w.ctpa_id,subscription_id:w.subscription_id,page:P.replace('.html','')})});
   const d=await r.json().catch(()=>({}));
   if(d.checkout_required&&d.checkout_url){document.documentElement.classList.remove('s4u-auth-pending');readyReject(Object.assign(new Error('Subscription renewal required.'),{status:402,payload:d}));renewModal(d);return}
   if(!r.ok||d.error||d.has_access===false){
