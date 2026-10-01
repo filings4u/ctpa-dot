@@ -25,4 +25,6 @@ window.S4UDialog={
   confirm:(message,opts={})=>open({...opts,kind:"confirm",message,title:opts.title||"Confirm action",confirmText:opts.confirmText||"Continue"}),
   prompt:(message,opts={})=>open({...opts,kind:"prompt",message,title:opts.title||"Information required",confirmText:opts.confirmText||"Continue"})
 };
+/* Global portal rule: browser alert boxes are never shown. */
+window.alert=(message)=>{window.S4UDialog.alert(String(message??""),{title:"screenings4u"});};
 })();
