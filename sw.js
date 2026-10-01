@@ -1,3 +1,33 @@
 'use strict';
-const CACHE='s4u-ctpa-static-v14';
-const PRECACHE=["/404.html","/CNAME","/assets/css/global-checkout.css","/assets/css/portal.css","images/logo.png","/assets/js/account-billing.js","/assets/js/account-pages.js","/assets/js/app.js","/assets/js/billing.js","/assets/js/branding.js","/assets/js/compliance.js","/assets/js/config.js","/assets/js/ctpa-integrations.js","/assets/js/ctpa-staff.js","/assets/js/dialogs.js","/assets/js/documents.js","/assets/js/dot-distribution-runtime.js","/assets/js/employer-billing.js","/assets/js/employer-form.js","/assets/js/employer-invoice-pages.js","/assets/js/employers.js","/assets/js/features.js","/assets/js/forgot-password.js","/assets/js/global-checkout.js","/assets/js/handoff.js","/assets/js/live-chat.js","/assets/js/locations.js","/assets/js/login.js","/assets/js/notifications.js","/assets/js/owner-operators.js","/assets/js/people-company.js","/assets/js/people-form.js","/assets/js/people.js","/assets/js/pool-detail.js","/assets/js/pool-form.js","/assets/js/pools.js","/assets/js/portal-security.js","/assets/js/program-detail.js","/assets/js/program-form.js","/assets/js/programs.js","/assets/js/report-archive.js","/assets/js/report-generate.js","/assets/js/report-view.js","/assets/js/reports.js","/assets/json/reset-password.json"]
+const CACHE='s4u-ctpa-static-fast-v20';
+const CORE=[
+  '/assets/css/portal.css','/assets/css/testing-page.css','/assets/css/global-checkout.css',
+  '/images/logo.png','/images/logo2.png','/images/fav.png',
+  '/assets/js/config.js','/assets/js/dialogs.js','/assets/js/session-security.js','/assets/js/app.js','/assets/js/validation.js'
+];
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()).catch(()=>self.skipWaiting()));
+});
+self.addEventListener('activate',event=>{
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+});
+function isStatic(req,url){
+  return req.method==='GET'&&url.origin===self.location.origin&&(/\.(?:js|css|png|jpg|jpeg|webp|svg|ico|woff2?|html)$/i.test(url.pathname));
+}
+self.addEventListener('fetch',event=>{
+  const req=event.request,url=new URL(req.url);
+  if(!isStatic(req,url))return;
+  if(url.pathname.endsWith('.html')){
+    event.respondWith(caches.open(CACHE).then(async cache=>{
+      const cached=await cache.match(req,{ignoreSearch:false});
+      const network=fetch(req).then(r=>{if(r&&r.ok)cache.put(req,r.clone());return r}).catch(()=>cached);
+      return cached||network;
+    }));
+    return;
+  }
+  event.respondWith(caches.open(CACHE).then(async cache=>{
+    const cached=await cache.match(req,{ignoreSearch:true});
+    if(cached){fetch(req).then(r=>{if(r&&r.ok)cache.put(req,r.clone())}).catch(()=>{});return cached;}
+    const r=await fetch(req);if(r&&r.ok)cache.put(req,r.clone());return r;
+  }));
+});

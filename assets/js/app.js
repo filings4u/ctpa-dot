@@ -76,7 +76,7 @@ function shell(ctx){
   document.title=`${cfgPage(current).label} | ${planLabel}`;
   if(current!=='support')supportCtxWrite({page_url:location.href,page_title:document.title,page_id:current,captured_at:new Date().toISOString()});
   document.body.className='';
-  document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="images/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(planLabel)}</div>${links}</nav><div class="side-foot"><div style="font-size:0.5625rem;color:#9fb3c7">Portal</div><div style="font-size:0.6875rem;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="mobileNav"><span class="menu-bars" aria-hidden="true"><span></span><span></span><span></span></span></button><span class="crumb">${esc(planLabel)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><div class="portal-clock" aria-label="Current date and time"><span id="portalClockDate" class="portal-clock-date"></span><strong id="portalClockTime" class="portal-clock-time"></strong></div><div class="font-sizer" role="group" aria-label="Page font size"><button type="button" id="fontDown" aria-label="Decrease font size" title="Decrease font size">A−</button><button type="button" class="font-reset" id="fontSizeValue" aria-label="Reset font size to default" title="Reset font size">${portalFontSize===FONT_DEFAULT?'Default':portalFontSize}</button><button type="button" id="fontUp" aria-label="Increase font size" title="Increase font size">A+</button></div><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="top-support${current==='support'?' active':''}" id="supportShortcut" type="button"${current==='support'?' aria-current="page"':''}>Support</button><button class="signout" id="logout">Sign out</button></div></header><section class="mobile-nav" id="mobileNav" aria-hidden="true" aria-label="Portal navigation"><div class="mobile-nav-inner"><div class="mobile-nav-head"><div><span>Portal navigation</span><strong>${esc(planLabel)}</strong></div><span class="mobile-nav-current">${esc(cfgPage(current).label)}</span></div><nav class="mobile-nav-links">${links}</nav><div class="mobile-nav-foot"><span>${esc(C.domain)}</span><small>Select a page to close this menu.</small></div></div></section><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(planLabel)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">Loading portal workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"><div class="panel"><div class="loading-msg">Loading…</div></div></section></div></main></div>`;
+  document.body.innerHTML=`<div class="app"><aside class="side" id="side"><div class="brand"><img src="images/logo.png" alt="${esc(C.label)}"></div><nav class="nav"><div class="nav-title">${esc(planLabel)}</div>${links}</nav><div class="side-foot"><div style="font-size:0.5625rem;color:#9fb3c7">Portal</div><div style="font-size:0.6875rem;font-weight:800;color:#fff;margin-top:3px">${esc(C.domain)}</div></div></aside><main class="main"><header class="top"><div class="top-left"><button class="menu" id="menu" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="mobileNav"><span class="menu-bars" aria-hidden="true"><span></span><span></span><span></span></span></button><span class="crumb">${esc(planLabel)} / ${esc(cfgPage(current).label)}</span></div><div class="top-right"><div class="portal-clock" aria-label="Current date and time"><span id="portalClockDate" class="portal-clock-date"></span><strong id="portalClockTime" class="portal-clock-time"></strong></div><div class="font-sizer" role="group" aria-label="Page font size"><button type="button" id="fontDown" aria-label="Decrease font size" title="Decrease font size">A−</button><button type="button" class="font-reset" id="fontSizeValue" aria-label="Reset font size to default" title="Reset font size">${portalFontSize===FONT_DEFAULT?'Default':portalFontSize}</button><button type="button" id="fontUp" aria-label="Increase font size" title="Increase font size">A+</button></div><span class="pill">${esc(C.kind==='self'?'Self Service':'Management')}</span>${C.agency?`<span class="pill">${esc(C.agency)}</span>`:''}<button class="top-support${current==='support'?' active':''}" id="supportShortcut" type="button"${current==='support'?' aria-current="page"':''}>Support</button><button class="signout" id="logout">Sign out</button></div></header><section class="mobile-nav" id="mobileNav" aria-hidden="true" aria-label="Portal navigation"><div class="mobile-nav-inner"><div class="mobile-nav-head"><div><span>Portal navigation</span><strong>${esc(planLabel)}</strong></div><span class="mobile-nav-current">${esc(cfgPage(current).label)}</span></div><nav class="mobile-nav-links">${links}</nav><div class="mobile-nav-foot"><span>${esc(C.domain)}</span><small>Select a page to close this menu.</small></div></div></section><div class="content"><div id="error"></div><section class="hero"><span class="hero-kicker">${esc(planLabel)}</span><h1>${esc(cfgPage(current).label)}</h1><p id="subtitle">C/TPA DOT workspace.</p><div class="hero-actions" id="actions"></div></section><section class="section" id="content"></section></div></main></div>`;
   requestAnimationFrame(()=>{const nav=document.querySelector('.side .nav'),active=nav?.querySelector('a.active');if(nav&&active){const top=active.offsetTop-nav.clientHeight/2+active.clientHeight/2;nav.scrollTop=Math.max(0,top)}});
   const menuBtn=$('#menu'),mobileNav=$('#mobileNav');
   const setMobileNav=open=>{
@@ -438,16 +438,35 @@ function wireManagementActions(p,d,ctx){
 }
 
 const PAGE_CACHE_NAME='s4u-ctpa-page-data-v5';
-const PAGE_CACHE_MAX_AGE=15*60*1000;
+const PAGE_CACHE_MAX_AGE=60*60*1000;
 function cacheIdentity(p,search=location.search){const w=workspace()||{};const q=String(search||'');return `${String(w.user_id||'u')}|${String(w.ctpa_id||'c')}|${String(w.subscription_id||'s')}|${norm(p)}|${q}`}
 function cacheUrl(p,search=location.search){const id=cacheIdentity(p,search);let h=2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619)}return `${location.origin}/__s4u_cache__/page/${(h>>>0).toString(36)}`}
 function isDynamicPage(p){return ['lab_accounts','schedule_demo','attend_demo','notifications','billing','employer_billing'].includes(norm(p))}
 async function readPageCache(p,search=location.search){try{if(isDynamicPage(p)||!('caches'in window))return null;const c=await caches.open(PAGE_CACHE_NAME),r=await c.match(cacheUrl(p,search));if(!r)return null;const x=await r.json();if(!x||Date.now()-Number(x.saved_at||0)>PAGE_CACHE_MAX_AGE)return null;return x.data}catch{return null}}
 async function writePageCache(p,data,search=location.search){try{if(isDynamicPage(p)||!('caches'in window)||data===undefined)return;const c=await caches.open(PAGE_CACHE_NAME);await c.put(cacheUrl(p,search),new Response(JSON.stringify({saved_at:Date.now(),data}),{headers:{'Content-Type':'application/json'}}))}catch{}}
-async function clearPageCache(){try{if('caches'in window)await caches.delete(PAGE_CACHE_NAME)}catch{}}
-const PREFETCH_PAGES=['dashboard','employers','people','programs','pools','selections','testing','results','compliance','documents','reports','notifications','create_order','price_list','order_services','order_history','subscription','billing','employer_billing','branding','integrations','locations','lab_accounts','users_roles','audit_history','schedule_demo','attend_demo','support'];
-let prefetchStarted=false;
-function schedulePortalPrefetch(){if(prefetchStarted||C.kind!=='ctpa')return;prefetchStarted=true;const run=async()=>{for(const p of PREFETCH_PAGES){if(p===page())continue;try{if(await readPageCache(p,''))continue;const d=await loadPageData(p);await writePageCache(p,d,'')}catch{}await new Promise(r=>setTimeout(r,40))}};if('requestIdleCallback'in window)requestIdleCallback(()=>run(),{timeout:1200});else setTimeout(run,250)}
+async function clearPageCache(){PAGE_MEMORY.clear();PAGE_INFLIGHT.clear();try{if('caches'in window)await caches.delete(PAGE_CACHE_NAME)}catch{}}
+const PAGE_MEMORY=new Map();
+const PAGE_INFLIGHT=new Map();
+function memoryCacheKey(p,search=location.search){return cacheIdentity(p,search)}
+async function getCachedPageData(p,search=location.search){
+  const key=memoryCacheKey(p,search),m=PAGE_MEMORY.get(key);
+  if(m&&Date.now()-m.saved_at<PAGE_CACHE_MAX_AGE)return m.data;
+  const d=await readPageCache(p,search);
+  if(d!==null)PAGE_MEMORY.set(key,{saved_at:Date.now(),data:d});
+  return d;
+}
+async function setCachedPageData(p,data,search=location.search){
+  const key=memoryCacheKey(p,search);PAGE_MEMORY.set(key,{saved_at:Date.now(),data});
+  await writePageCache(p,data,search);
+}
+async function loadPageDataCached(p,search=location.search,{force=false}={}){
+  const key=memoryCacheKey(p,search);
+  if(!force){const cached=await getCachedPageData(p,search);if(cached!==null)return cached;}
+  if(PAGE_INFLIGHT.has(key))return PAGE_INFLIGHT.get(key);
+  const task=(async()=>{const d=await loadPageData(p);await setCachedPageData(p,d,search);return d})().finally(()=>PAGE_INFLIGHT.delete(key));
+  PAGE_INFLIGHT.set(key,task);return task;
+}
+function schedulePortalPrefetch(){} // Deliberately disabled. Bulk prefetching overloaded the backend.
 async function loadPageData(p){
   let d;
   if(C.kind==='self')d=await selfData();else if(C.kind==='ctpa')d=await ctpaData(p);else d=await employerData(p);
@@ -599,21 +618,67 @@ function startRealtime(ctx){
     liveChannel=sb.channel('ctpa-live-'+ctpaId).on('postgres_changes',{event:'INSERT',schema:'public',table:'ctpa_activity_events',filter:'ctpa_id=eq.'+ctpaId},()=>scheduleLiveRender()).subscribe();
   }catch(e){console.warn('Realtime unavailable',e)}
 }
+async function refreshCurrent({force=true}={}){
+  if(!window.portalCtx)return;
+  const p=page(),search=location.search;
+  const d=await loadPageDataCached(p,search,{force});
+  await render(window.portalCtx,d);
+}
+
+const CORE_SCRIPT_RE=/\/(?:config|dialogs|session-security|app|validation)\.js(?:\?|$)/;
+const loadedAssets=new Set([...document.querySelectorAll('script[src],link[rel="stylesheet"][href]')].map(n=>n.src||n.href));
+async function ensureAsset(src,type){
+  const u=new URL(src,location.origin).href;if(loadedAssets.has(u)||CORE_SCRIPT_RE.test(new URL(u).pathname))return;
+  if(type==='style'){await new Promise((resolve,reject)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=u;l.onload=resolve;l.onerror=reject;document.head.appendChild(l)});loadedAssets.add(u);return;}
+  await new Promise((resolve,reject)=>{const x=document.createElement('script');x.src=u;x.async=false;x.onload=resolve;x.onerror=reject;document.head.appendChild(x)});loadedAssets.add(u);
+}
+const HTML_PREFETCH=new Map();
+async function fetchPageDocument(url){
+  const u=new URL(url,location.href);u.hash='';const key=u.pathname+u.search;
+  if(HTML_PREFETCH.has(key))return HTML_PREFETCH.get(key);
+  const task=fetch(u.href,{credentials:'same-origin',cache:'force-cache'}).then(r=>{if(!r.ok)throw new Error('Unable to load page.');return r.text()}).then(t=>new DOMParser().parseFromString(t,'text/html')).finally(()=>setTimeout(()=>HTML_PREFETCH.delete(key),30000));
+  HTML_PREFETCH.set(key,task);return task;
+}
+async function prepareTarget(url){
+  const u=new URL(url,location.href),doc=await fetchPageDocument(u.href);
+  for(const l of [...doc.querySelectorAll('link[rel="stylesheet"][href]')])await ensureAsset(l.getAttribute('href'),'style');
+  for(const sc of [...doc.querySelectorAll('script[src]')])await ensureAsset(sc.getAttribute('src'),'script');
+  return {doc,u,targetPage:norm(doc.body?.dataset?.portalPage||u.pathname.split('/').pop()?.replace('.html','')||'dashboard')};
+}
+function updateActiveNavigation(){
+  const cur=page();document.querySelectorAll('.nav a,.mobile-nav-links a').forEach(a=>{const u=new URL(a.href,location.href),id=norm(u.pathname.split('/').pop()?.replace('.html','')||'');a.classList.toggle('active',id===cur||(id==='people'&&cur==='people_company')||(id==='pools'&&['pool_detail','pool_form'].includes(cur))||(id==='locations'&&cur==='location_form')||(id==='users_roles'&&['staff_form','staff_view','staff_invite','staff_delete'].includes(cur)))});
+}
+async function navigatePortal(url,{replace=false,pop=false}={}){
+  const u=new URL(url,location.href);
+  if(u.origin!==location.origin||!u.pathname.endsWith('.html')){location.href=u.href;return}
+  const prepared=await prepareTarget(u.href);
+  const targetPage=prepared.targetPage,targetSearch=u.search;
+  const cached=await getCachedPageData(targetPage,targetSearch);
+  if(!pop){if(replace)history.replaceState({s4u:true},'',u.pathname+u.search+u.hash);else history.pushState({s4u:true},'',u.pathname+u.search+u.hash)}
+  document.body.dataset.portalPage=targetPage;
+  shell(window.portalCtx);updateActiveNavigation();
+  if(cached!==null){await render(window.portalCtx,cached);loadPageDataCached(targetPage,targetSearch,{force:true}).then(d=>{if(page()===targetPage&&location.search===targetSearch)render(window.portalCtx,d)}).catch(console.warn);return}
+  // Keep navigation chrome responsive; no spinner. Usually this request has already started on hover.
+  const d=await loadPageDataCached(targetPage,targetSearch,{force:false});
+  if(page()===targetPage)await render(window.portalCtx,d);
+}
+function installFastNavigation(){
+  document.addEventListener('click',e=>{const a=e.target.closest?.('a[href]');if(!a||e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||a.target||a.hasAttribute('download'))return;const u=new URL(a.href,location.href);if(u.origin!==location.origin||!u.pathname.endsWith('.html'))return;e.preventDefault();navigatePortal(u.href).catch(err=>{console.warn('Soft navigation fallback',err);location.href=u.href})},true);
+  const pre=e=>{const a=e.target.closest?.('a[href]');if(!a)return;const u=new URL(a.href,location.href);if(u.origin!==location.origin||!u.pathname.endsWith('.html'))return;prepareTarget(u.href).then(({targetPage,u})=>loadPageDataCached(targetPage,u.search,{force:false})).catch(()=>{})};
+  document.addEventListener('pointerenter',pre,true);document.addEventListener('focusin',pre,true);document.addEventListener('touchstart',pre,{capture:true,passive:true});
+  addEventListener('popstate',()=>navigatePortal(location.href,{pop:true}).catch(()=>location.reload()));
+}
 async function init(){
   try{
-    const p=page();
-    const cachedPromise=readPageCache(p);
-    const freshPromise=loadPageData(p).then(async d=>{await writePageCache(p,d);return d});
     const ctx=await access();if(!ctx?.has_access)throw new Error(ctx?.reason||'Portal access denied.');
-    window.portalCtx=ctx;shell(ctx);
-    const cached=await cachedPromise;
-    if(cached!==null)await render(ctx,cached);
-    const d=await freshPromise;
-    await render(ctx,d);
-    startRealtime(ctx);schedulePortalPrefetch()
+    window.portalCtx=ctx;shell(ctx);installFastNavigation();
+    const p=page(),search=location.search,cached=await getCachedPageData(p,search);
+    if(cached!==null){await render(ctx,cached);loadPageDataCached(p,search,{force:true}).then(d=>{if(page()===p&&location.search===search)render(ctx,d)}).catch(console.warn)}
+    else {const d=await loadPageDataCached(p,search,{force:false});await render(ctx,d)}
+    startRealtime(ctx);
   }
   catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();await clearPageCache();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('/login.html');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="images/logo.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
 }
-window.Portal={invoke,sb,refresh:async()=>{if(!window.portalCtx)return;await render(window.portalCtx)},liveRefresh:scheduleLiveRender};
+window.Portal={invoke,sb,refresh:async()=>{if(!window.portalCtx)return;const p=page(),search=location.search;PAGE_MEMORY.delete(memoryCacheKey(p,search));await refreshCurrent({force:true})},navigate:navigatePortal,liveRefresh:scheduleLiveRender};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
