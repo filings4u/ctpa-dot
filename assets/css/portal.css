@@ -1148,62 +1148,78 @@ body[data-portal-page="staff-form"] .form-actions,body[data-portal-page="staff-v
 
 
 /* ============================================================
-   C/TPA PORTAL TOP HEADER — organized utility bar v21
+   C/TPA PORTAL TOP HEADER — clean utility bar v22
    ============================================================ */
 .top{
-  height:72px;
-  display:grid;
-  grid-template-columns:minmax(220px,1fr) auto minmax(360px,1fr);
+  height:68px;
+  display:flex;
   align-items:center;
-  gap:20px;
+  justify-content:space-between;
+  gap:18px;
   padding:0 22px;
+  background:#fff;
+  border-bottom:1px solid var(--line);
 }
-.top-left{justify-self:start;min-width:0;gap:12px}
-.top-center{justify-self:center;min-width:0}
-.top-right{justify-self:end;min-width:0;gap:8px}
-.top-context{display:grid;gap:2px;min-width:0;line-height:1.1}
-.top-context-label{font-size:.56rem;font-weight:850;letter-spacing:.055em;text-transform:uppercase;color:#7d90a5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top-page-title{font-size:.78rem;font-weight:850;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.crumb{display:none!important}
+.top-left,.top-right{display:flex;align-items:center;min-width:0}
+.top-left{gap:10px;flex:1 1 auto}
+.top-right{gap:8px;flex:0 0 auto;margin-left:auto}
+.top-page-title{
+  font-size:.74rem;
+  font-weight:850;
+  color:var(--navy);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.top-center,.top-context,.crumb{display:none!important}
 .portal-clock{
-  min-width:0;
-  padding:0;
-  border-right:0;
-  justify-content:center;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
   gap:9px;
-  text-align:center;
+  min-width:auto;
+  padding:0 12px 0 0;
+  margin:0 2px 0 0;
+  border-right:1px solid var(--line);
+  text-align:right;
 }
 .portal-clock-date{font-size:.64rem!important;color:#71869b;font-weight:750}
-.portal-clock-time{font-size:.75rem!important;color:var(--navy);font-weight:900}
+.portal-clock-time{font-size:.76rem!important;color:var(--navy);font-weight:900}
+.top-agency{height:30px;display:inline-flex;align-items:center}
 .font-sizer{height:36px;padding:3px;border-radius:10px}
 .font-sizer button{height:28px;min-width:31px;padding:0 8px}
 .font-sizer .font-reset{min-width:48px}
-.top-support,.signout{height:36px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:10px;font-weight:800;white-space:nowrap}
+.top-support,.signout{
+  height:36px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  border-radius:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
 .signout{color:#2d4662;background:#fff;border-color:#cbd8e5}
 .signout:hover{background:#f6f9fc;border-color:#afc0d1}
-.top-agency{height:30px;display:inline-flex;align-items:center}
-@media(max-width:1180px){
-  .top{grid-template-columns:minmax(200px,1fr) auto auto;gap:12px;padding:0 16px}
-  .top-context-label{display:none}
-  .top-page-title{font-size:.72rem}
-}
-@media(max-width:980px){
-  .top{grid-template-columns:minmax(0,1fr) auto;height:68px}
-  .top-center{display:none}
-  .top-right{gap:6px}
+@media(max-width:1120px){
+  .top{padding:0 16px;gap:12px}
+  .portal-clock-date{display:none}
+  .portal-clock{padding-right:10px}
   .top-agency{display:none}
 }
+@media(max-width:900px){
+  .portal-clock{display:none}
+}
 @media(max-width:820px){
-  .top{grid-template-columns:minmax(0,1fr) auto;padding:0 12px;gap:8px}
-  .top-left{gap:8px}
-  .top-context-label{display:block;font-size:.52rem}
+  .top{height:60px;padding:0 10px;gap:8px}
+  .top-left{gap:8px;overflow:hidden}
+  .top-right{gap:6px}
   .top-page-title{font-size:.68rem}
   .font-sizer{display:none}
-  .top-support,.signout{height:34px;padding:0 10px}
+  .top-support,.signout{height:36px;padding:0 10px}
 }
 @media(max-width:520px){
-  .top-context-label{display:none}
-  .top-page-title{max-width:145px}
-  .top-support{padding:0 9px}
+  .top-page-title{max-width:150px}
+  .top-support{display:none}
   .signout{padding:0 9px}
 }
