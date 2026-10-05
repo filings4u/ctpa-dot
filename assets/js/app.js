@@ -49,7 +49,7 @@ function buildNavigation(ctx={}){
     ['dashboard','Dashboard','⌂',null],
     ['employers','1. Employers','▣','employer_management'],['people','2. People','●','employee_management'],['programs','3. Programs','◎','programs'],
     ['pools','4. Pools','◉','consortium_pools'],['selections','5. Selections','↻','random_selections'],['testing','6. Testing','◆','testing_orders'],['results','7. Results','✓','results_summary'],
-['compliance','Compliance','◇','compliance'],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Messages','✉','notifications','enterprise'],
+['compliance','Compliance','◇','compliance'],['new-entrant-audits','New Entrant Audits','☑',null],['documents','Documents','▤','documents'],['reports','Reports','▥','standard_reports'],['notifications','Employer Messages','✉','notifications','enterprise'],
     ['create-order','Create Order','＋',null],['price-list','Testing Price List','$',null],['order-services','Add Features','＋',null],['order-history','Order History','≡',null],['subscription','Subscription','◫',null],['billing','screenings4u Billing','$','billing_tools'],['employer-billing','Employer Billing','$','client_invoicing'],
     ['branding','Branding','◐','white_label'],['integrations','Integrations','↔','integrations'],['locations','Locations','⌖','locations'],['lab-accounts','Lab Accounts','⌬',null],['users-roles','Users & Roles','♙','team_users'],['audit-history','Audit & Log History','◷','audit_history'],['schedule-demo','Schedule Demo','◫',null],['attend-demo','Attend Demo','▶',null],['support','Support','? ',null]
   ];
@@ -64,7 +64,8 @@ async function invoke(name,body={}){
   const s=await getSession();if(!s)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
   const w=workspace();if(!w?.ctpa_id||!w?.subscription_id)throw Object.assign(new Error('C/TPA workspace selection is required.'),{status:409});
   const payload={...body,legacy_endpoint:name,ctpa_id:w.ctpa_id,subscription_id:w.subscription_id,membership_id:w.membership_id||undefined};
-  const r=await fetch(`${C.workforceUrl}/functions/v1/ctpa-dot?forceFunctionRegion=ca-central-1`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d;
+  const endpoint=name==='ctpa-new-entrant-audits'?`${C.workforceUrl}/functions/v1/ctpa-new-entrant-audits`:`${C.workforceUrl}/functions/v1/ctpa-dot?forceFunctionRegion=ca-central-1`;
+  const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.access_token}`,'apikey':C.workforceKey},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));const em=typeof d.error==='string'?d.error:(d.error?.message||d.message||d.details||d.hint||'');if(!r.ok||d.error)throw Object.assign(new Error(em||`Request failed (${r.status}).`),{status:r.status,payload:d});return d;
 }
 async function access(){if(window.S4UCTPAVerifiedContext)return window.S4UCTPAVerifiedContext;if(window.S4UCTPAAuthReady)return await window.S4UCTPAAuthReady;throw Object.assign(new Error('Authentication verification is unavailable.'),{status:500})}
 
@@ -233,6 +234,7 @@ function bindUtilityPage(p,d,ctx){
 async function ctpaData(p){
   if(p==='employers'||p==='employer_form')return invoke('workforce-ctpa-employers',{action:'workspace'});
   if(p==='owner_operators')return invoke('workforce-ctpa-owner-operators',{action:'workspace'});
+  if(p==='new_entrant_audits'){const id=new URLSearchParams(location.search).get('id')||'';return invoke('ctpa-new-entrant-audits',id?{action:'audit',audit_id:id}:{action:'workspace'});}
   if(p==='people'||p==='people_form'||p==='people_company'||p==='programs'||p==='program_form'||p==='program_detail')return invoke('workforce-ctpa-employees-programs',{action:'workspace'});
   if(p==='pools'||p==='pool_detail'||p==='pool_form')return invoke('workforce-ctpa-pools',{action:'workspace'});
   if(p==='selections'||p==='selection_detail')return invoke('workforce-ctpa-selections',{action:'workspace'});
@@ -513,6 +515,7 @@ async function render(ctx,prefetched){
   else if(C.kind==='ctpa'&&p==='testing_document_edit'&&window.CtpaTestingDocumentEdit){setSubtitle('Edit a C/TPA-owned testing document.');html=window.CtpaTestingDocumentEdit.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='result_detail'&&window.CtpaResultDetail){setSubtitle('View read-only finalized result details and download the official report.');html=window.CtpaResultDetail.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='owner_operators'&&window.CtpaOwnerOperators){setSubtitle('Manage Owner-Operator customers sponsored by this C/TPA.');html=window.CtpaOwnerOperators.render(d,ctx);}
+  else if(C.kind==='ctpa'&&p==='new_entrant_audits'&&window.CtpaNewEntrantAudits){setSubtitle('Prepare Owner-Operators for the FMCSA New Entrant Safety Audit with a documented readiness workflow.');html=window.CtpaNewEntrantAudits.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections){setSubtitle('Run auditable random selections by consortium pool, create testing orders, export records, and deliver selections to Employer portals.');html=window.CtpaSelections.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='selection_detail'&&window.CtpaSelectionDetail){setSubtitle('Review the locked selection population, selected people, testing orders, and Employer notices.');html=window.CtpaSelectionDetail.render(d,ctx);}
   else if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting){setSubtitle('Create and monitor DOT testing orders and their screenings4u fulfillment handoffs.');html=window.CtpaTesting.render(d,ctx);}
@@ -582,6 +585,7 @@ async function render(ctx,prefetched){
   if(C.kind==='ctpa'&&p==='testing_document_edit'&&window.CtpaTestingDocumentEdit)window.CtpaTestingDocumentEdit.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='result_detail'&&window.CtpaResultDetail)window.CtpaResultDetail.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='owner_operators'&&window.CtpaOwnerOperators)window.CtpaOwnerOperators.bind(d,ctx);
+  if(C.kind==='ctpa'&&p==='new_entrant_audits'&&window.CtpaNewEntrantAudits)window.CtpaNewEntrantAudits.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='selections'&&window.CtpaSelections)window.CtpaSelections.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='selection_detail'&&window.CtpaSelectionDetail)window.CtpaSelectionDetail.bind(d,ctx);
   if(C.kind==='ctpa'&&p==='testing'&&window.CtpaTesting)window.CtpaTesting.bind(d,ctx);
