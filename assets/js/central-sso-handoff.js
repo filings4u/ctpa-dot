@@ -12,6 +12,6 @@ try{
  const client=window.S4UGetSupabaseClient();
  const {data,error}=await client.auth.verifyOtp({token_hash:payload.token_hash,type:'magiclink'});
  if(error||!data?.session)throw error||Error('Unable to establish the portal session.');
- location.replace('/workspace.html');
+ const next=new URL(payload.next_path||'/workspace.html',location.origin);if(next.origin!==location.origin||next.pathname!=='/workspace.html')throw Error('Invalid destination.');location.replace(next.pathname+next.search);
 }catch(e){fail(e?.message||'The secure sign-in could not be completed.')}
 })();
