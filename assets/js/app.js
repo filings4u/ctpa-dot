@@ -681,7 +681,7 @@ async function init(){
     else {const d=await loadPageDataCached(p,search,{force:false});await render(ctx,d)}
     startRealtime(ctx);
   }
-  catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();await clearPageCache();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('https://portal.screenings4u.com/');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="images/logo.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>`}
+  catch(e){if(e?.status===401||e?.message==='AUTH_REQUIRED'){W.clear();await clearPageCache();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('https://portal.screenings4u.com/');return}if(e?.status===402)return;document.body.className='login-page';document.body.innerHTML=`<main class="login-card"><img class="login-logo" src="images/logo.png"><h1>Portal unavailable</h1><p>${esc(e.message||String(e))}</p><a class="btn primary" href="https://portal.screenings4u.com/selector.html">Choose C/TPA Account</a></main>`}
 }
 window.Portal={invoke,sb,refresh:async()=>{if(!window.portalCtx)return;const p=page(),search=location.search;PAGE_MEMORY.delete(memoryCacheKey(p,search));await refreshCurrent({force:true})},navigate:navigatePortal,liveRefresh:scheduleLiveRender};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
