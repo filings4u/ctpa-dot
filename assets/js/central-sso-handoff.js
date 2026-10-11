@@ -22,6 +22,6 @@ try{
  if(!check.ok||!d.ok||!d.ctpa?.id||!d.subscription?.id)throw Error(d.error||'Selected account is not authorized.');
  const saved=window.S4UCTPAWorkspace.set({user_id:data.session.user.id,ctpa_id:d.ctpa.id,organization_id:d.organization?.id,membership_id:d.membership?.id,subscription_id:d.subscription.id,plan_code:d.plan?.code,plan_name:d.plan?.name,organization_name:d.organization?.dba_name||d.organization?.legal_name});
  try{sessionStorage.setItem('s4u_ctpa_dot_verified_ctx_v2',JSON.stringify({saved_at:Date.now(),user_id:data.session.user.id,ctpa_id:saved.ctpa_id,subscription_id:saved.subscription_id,ctx:d}))}catch{}
- location.replace('/dashboard.html');
+ try{localStorage.setItem('s4u_ctpa_dot_idle_last',String(Date.now()))}catch{}\n location.replace('/dashboard.html');
 }catch(e){fail(e?.message||'The secure sign-in could not be completed.')}
 })();
