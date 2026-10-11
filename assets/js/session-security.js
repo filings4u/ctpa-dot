@@ -23,7 +23,7 @@ async function guard(){try{
   const {data:{session},error}=await sb.auth.getSession();
   if(error||!session){W.clear();try{sessionStorage.removeItem(KEY_CTX)}catch{};location.replace('https://portal.screenings4u.com/');return}
   const w=W.read();
-  if(!w||w.user_id!==session.user.id){W.clear();try{sessionStorage.removeItem(KEY_CTX)}catch{};location.replace('/workspace.html');return}
+  if(!w||w.user_id!==session.user.id){W.clear();try{sessionStorage.removeItem(KEY_CTX)}catch{};location.replace('https://portal.screenings4u.com/selector.html');return}
   const cached=readCachedContext(session,w);
   if(cached){finishAuth(cached);return}
   const r=await fetch(C.workforceUrl+'/functions/v1/ctpa-dot/session?forceFunctionRegion=ca-central-1',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':C.workforceKey},body:JSON.stringify({ctpa_id:w.ctpa_id,subscription_id:w.subscription_id,page:P.replace('.html','')})});
@@ -32,7 +32,7 @@ async function guard(){try{
   if(!r.ok||d.error||d.has_access===false){
     try{sessionStorage.removeItem(KEY_CTX)}catch{};
     if(r.status===401){W.clear();try{await sb.auth.signOut({scope:'local'})}catch{};location.replace('https://portal.screenings4u.com/');return}
-    W.clear();document.documentElement.classList.remove('s4u-auth-pending');readyReject(Object.assign(new Error(d.error||'Unable to verify C/TPA access.'),{status:r.status,payload:d}));document.body.classList.remove('loading');document.body.innerHTML='<main class="login-card"><img class="login-logo" src="images/logo.png"><h1>C/TPA account unavailable</h1><p>'+String(d.error||'Unable to verify C/TPA access.').replace(/[<>]/g,'')+'</p><a class="btn primary" href="/workspace.html">Choose C/TPA Account</a></main>';return
+    W.clear();document.documentElement.classList.remove('s4u-auth-pending');readyReject(Object.assign(new Error(d.error||'Unable to verify C/TPA access.'),{status:r.status,payload:d}));document.body.classList.remove('loading');document.body.innerHTML='<main class="login-card"><img class="login-logo" src="images/logo.png"><h1>C/TPA account unavailable</h1><p>'+String(d.error||'Unable to verify C/TPA access.').replace(/[<>]/g,'')+'</p><a class="btn primary" href="https://portal.screenings4u.com/selector.html">Choose C/TPA Account</a></main>';return
   }
   W.set({user_id:session.user.id,ctpa_id:d.ctpa?.id,organization_id:d.organization?.id,membership_id:d.membership?.id,subscription_id:d.subscription?.id,plan_code:d.plan?.code,plan_name:d.plan?.name,organization_name:d.organization?.dba_name||d.organization?.legal_name,powered_by:w.powered_by});
   const freshW=W.read();writeCachedContext(session,freshW,d);finishAuth(d);
