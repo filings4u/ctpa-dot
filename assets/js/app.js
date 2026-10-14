@@ -645,7 +645,7 @@ async function fetchPageDocument(url){
 }
 async function prepareTarget(url){
   const u=new URL(url,location.href),doc=await fetchPageDocument(u.href);
-  for(const l of [...doc.querySelectorAll('link[rel="stylesheet"][href]')])await ensureAsset(l.getAttribute('href'),'style');
+  await Promise.all([...doc.querySelectorAll('link[rel="stylesheet"][href]')].map(l=>ensureAsset(l.getAttribute('href'),'style')));
   for(const sc of [...doc.querySelectorAll('script[src]')])await ensureAsset(sc.getAttribute('src'),'script');
   return {doc,u,targetPage:norm(doc.body?.dataset?.portalPage||u.pathname.split('/').pop()?.replace('.html','')||'dashboard')};
 }
